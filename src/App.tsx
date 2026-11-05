@@ -1,13 +1,24 @@
 import React, { useState } from 'react';
-import { ScreenType, Project, UserStory, FollowUpQuestion, StagedFile, AudioSource, UserProfile } from './types.ts';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { ScreenType, Project, UserStory, FollowUpQuestion, StagedFile, AudioSource } from './types.ts';
+import { errorMessage } from './api/client.ts';
+import { getUserName, saveUserName } from './api/identity.ts';
 import {
-  INITIAL_PROJECTS,
+  PROJECTS_QUERY_KEY,
+  createProject,
+  deleteProject,
+  formatFilesSummary,
+  listProjects,
+  updateProject,
+} from './api/projects.ts';
+import {
   INITIAL_STORIES,
   INITIAL_FOLLOW_UP_QUESTIONS,
   INITIAL_AUDIO_SOURCES,
   INITIAL_DOCUMENT_SOURCES,
   INITIAL_STAGED_FILES,
 } from './data/mockData.ts';
+import { ApiStatusBanner } from './components/ApiStatusBanner.tsx';
 import { Header } from './components/Header.tsx';
 import { ProjectHeader } from './components/ProjectHeader.tsx';
 import { ProjectNav } from './components/ProjectNav.tsx';
@@ -17,28 +28,41 @@ import { VisaoGeralScreen } from './screens/VisaoGeralScreen.tsx';
 import { FollowUpScreen } from './screens/FollowUpScreen.tsx';
 import { AvaliacaoQualidadeScreen } from './screens/AvaliacaoQualidadeScreen.tsx';
 import { ProjetoScreen } from './screens/ProjetoScreen.tsx';
-import { AuthScreen } from './screens/AuthScreen.tsx';
+import { ProfileScreen } from './screens/ProfileScreen.tsx';
+
+interface SimulatedSources {
+  audios: number;
+  docs: number;
+}
+
+// Temporário: a ingestão ainda é simulada e não chega à API; sai quando o upload real for ligado.
+const withSimulatedSources = (project: Project, sources?: SimulatedSources): Project => {
+  if (!sources) return project;
+  const audiosCount = project.audiosCount + sources.audios;
+  const docsCount = project.docsCount + sources.docs;
+  return { ...project, audiosCount, docsCount, filesSummary: formatFilesSummary(audiosCount, docsCount) };
+};
 
 export default function App() {
   // Navigation State - Initial Screen: 1. Home - Meus Projetos
   const [requestedScreen, setCurrentScreen] = useState<ScreenType>('home');
 
-  // Authenticated User Profile
-  const [currentUser, setCurrentUser] = useState<UserProfile | null>({
-    id: 'user-01',
-    name: 'Graziela Félix',
-    email: 'grazielafelix.manager@gmail.com',
-    role: 'Product Manager & Requirements Lead',
-    company: 'Banco Digital Corp',
-  });
+  // Nome registrado como responsável pelas alterações (X-Usuario)
+  const [userName, setUserName] = useState<string | null>(getUserName);
 
-  // Active Project & List
-  const [projects, setProjects] = useState<Project[]>(INITIAL_PROJECTS);
-  const [activeProject, setActiveProject] = useState<Project | null>(INITIAL_PROJECTS[0]);
+  // Projects (API)
+  const queryClient = useQueryClient();
+  const projectsQuery = useQuery({ queryKey: PROJECTS_QUERY_KEY, queryFn: listProjects });
+  const [simulatedSources, setSimulatedSources] = useState<Record<string, SimulatedSources>>({});
+  const projects = (projectsQuery.data ?? []).map((p) => withSimulatedSources(p, simulatedSources[p.id]));
+
+  // Active Project: o escolhido ou, se não houver, o primeiro da lista
+  const [activeProjectId, setActiveProjectId] = useState<string | null>(null);
+  const activeProject = projects.find((p) => p.id === activeProjectId) ?? projects[0] ?? null;
 
   // Telas de projeto exigem um projeto ativo; sem ele, a Home é exibida.
   const currentScreen: ScreenType =
-    activeProject || requestedScreen === 'home' || requestedScreen === 'auth' ? requestedScreen : 'home';
+    activeProject || requestedScreen === 'home' || requestedScreen === 'perfil' ? requestedScreen : 'home';
 
   // Projeto sem áudios ou documentos não tem backlog, fontes nem perguntas.
   const projectHasSources = !!activeProject && activeProject.audiosCount + activeProject.docsCount > 0;
@@ -68,64 +92,56 @@ export default function App() {
     }, 4000);
   };
 
-  // Project Creation Handler
-  const handleCreateProject = (name: string, description: string) => {
-    const newProj: Project = {
-      id: `proj-${Date.now()}`,
-      name,
-      description: description || 'Novo projeto de requisitos e user stories.',
-      audiosCount: 0,
-      docsCount: 0,
-      filesSummary: '0 áudios • 0 documentos',
-      status: 'andamento',
-      isFavorite: false,
-    };
-    setProjects((prev) => [newProj, ...prev]);
-    setActiveProject(newProj);
-    setStagedFiles([]);
+  // Runs a project change and refreshes the list. Returns false after showing the API error.
+  const runProjectChange = async (change: () => Promise<void>): Promise<boolean> => {
+    try {
+      await change();
+      await queryClient.invalidateQueries({ queryKey: PROJECTS_QUERY_KEY });
+      return true;
+    } catch (error) {
+      triggerToast(errorMessage(error), 'error');
+      return false;
+    }
   };
+
+  // Project Creation Handler
+  const handleCreateProject = (name: string, description: string) =>
+    runProjectChange(async () => {
+      const created = await createProject(name, description);
+      setActiveProjectId(created.id);
+      setStagedFiles([]);
+    });
 
   // Files read in the ingestion screen become sources of the active project
   const handleFilesProcessed = (files: StagedFile[]) => {
     if (!activeProject) return;
-    const audiosCount = activeProject.audiosCount + files.filter((f) => f.type === 'audio').length;
-    const docsCount = activeProject.docsCount + files.filter((f) => f.type !== 'audio').length;
-    const updated: Project = {
-      ...activeProject,
-      audiosCount,
-      docsCount,
-      filesSummary: `${audiosCount} ${audiosCount === 1 ? 'áudio' : 'áudios'} • ${docsCount} ${docsCount === 1 ? 'documento' : 'documentos'}`,
-    };
-    setProjects((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
-    setActiveProject(updated);
+    const audios = files.filter((f) => f.type === 'audio').length;
+    const docs = files.length - audios;
+    setSimulatedSources((prev) => {
+      const current = prev[activeProject.id] ?? { audios: 0, docs: 0 };
+      return { ...prev, [activeProject.id]: { audios: current.audios + audios, docs: current.docs + docs } };
+    });
     setStagedFiles([]);
   };
 
   // Delete project handler
-  const handleDeleteProject = (projectId: string) => {
-    const projectToDelete = projects.find((p) => p.id === projectId);
-    const updatedProjects = projects.filter((p) => p.id !== projectId);
-    setProjects(updatedProjects);
-    if (activeProject?.id === projectId) {
-      setActiveProject(updatedProjects[0] ?? null);
-    }
-    triggerToast(`Projeto "${projectToDelete?.name || ''}" excluído com sucesso.`, 'delete');
-  };
+  const handleDeleteProject = (projectId: string) =>
+    runProjectChange(async () => {
+      const projectToDelete = projects.find((p) => p.id === projectId);
+      await deleteProject(projectId);
+      triggerToast(`Projeto "${projectToDelete?.name || ''}" excluído com sucesso.`, 'delete');
+    });
 
   // Update project handler
-  const handleUpdateProject = (updatedProject: Project) => {
-    setProjects((prev) =>
-      prev.map((p) => (p.id === updatedProject.id ? updatedProject : p))
-    );
-    if (activeProject?.id === updatedProject.id) {
-      setActiveProject(updatedProject);
-    }
-    triggerToast(`Projeto "${updatedProject.name}" atualizado com sucesso!`, 'check_circle');
-  };
+  const handleUpdateProject = (updatedProject: Project) =>
+    runProjectChange(async () => {
+      await updateProject(updatedProject.id, updatedProject.name, updatedProject.description);
+      triggerToast(`Projeto "${updatedProject.name}" atualizado com sucesso!`, 'check_circle');
+    });
 
   // Open existing project from Home
   const handleOpenProject = (project: Project) => {
-    setActiveProject(project);
+    setActiveProjectId(project.id);
     setCurrentScreen('visao-geral');
     triggerToast(`Projeto "${project.name}" aberto com sucesso!`);
   };
@@ -199,16 +215,11 @@ export default function App() {
     );
   };
 
-  // Auth Handlers
-  const handleLogin = (user: UserProfile) => {
-    setCurrentUser(user);
+  const handleSaveUserName = (name: string | null) => {
+    saveUserName(name);
+    setUserName(name);
     setCurrentScreen('home');
-  };
-
-  const handleLogout = () => {
-    setCurrentUser(null);
-    setCurrentScreen('auth');
-    triggerToast('Você saiu da sua conta.');
+    triggerToast(name ? `Alterações serão registradas como ${name}.` : 'Nome removido do registro de alterações.');
   };
 
   return (
@@ -219,15 +230,15 @@ export default function App() {
         onNavigate={setCurrentScreen}
         activeProject={activeProject}
         projects={projects}
-        onSelectProject={setActiveProject}
-        currentUser={currentUser}
-        onLogout={handleLogout}
+        onSelectProject={(project) => setActiveProjectId(project.id)}
+        userName={userName}
       />
 
       {/* 2. Main Screen Viewport */}
       <main className="w-full flex-1 pt-16 flex flex-col">
+        <ApiStatusBanner />
         {/* Menu de Navegação do Projeto + Informações do Projeto (Título e Descrição) logo abaixo do menu */}
-        {currentScreen !== 'home' && currentScreen !== 'auth' && activeProject && (
+        {currentScreen !== 'home' && currentScreen !== 'perfil' && activeProject && (
           <div className="w-full">
             <ProjectNav
               currentScreen={currentScreen}
@@ -240,12 +251,12 @@ export default function App() {
             />
           </div>
         )}
-        {/* Screen Auth: Login & Cadastro */}
-        {currentScreen === 'auth' && (
-          <AuthScreen
-            onLogin={handleLogin}
-            onNavigate={setCurrentScreen}
-            showToast={triggerToast}
+        {/* Nome registrado como responsável */}
+        {currentScreen === 'perfil' && (
+          <ProfileScreen
+            userName={userName}
+            onSave={handleSaveUserName}
+            onCancel={() => setCurrentScreen('home')}
           />
         )}
 
@@ -253,6 +264,9 @@ export default function App() {
         {currentScreen === 'home' && (
           <HomeScreen
             projects={projects}
+            isLoading={projectsQuery.isPending}
+            loadError={projectsQuery.isError && !projectsQuery.data ? errorMessage(projectsQuery.error) : null}
+            onRetry={() => projectsQuery.refetch()}
             onOpenProject={handleOpenProject}
             onCreateProject={handleCreateProject}
             onUpdateProject={handleUpdateProject}
@@ -349,10 +363,10 @@ export default function App() {
             </button>
             <span>•</span>
             <button
-              onClick={() => setCurrentScreen('auth')}
+              onClick={() => setCurrentScreen('perfil')}
               className="hover:text-primary transition-colors cursor-pointer font-semibold text-primary"
             >
-              {currentUser ? 'Minha Conta' : 'Entrar / Cadastro'}
+              Seu nome
             </button>
           </div>
         </div>

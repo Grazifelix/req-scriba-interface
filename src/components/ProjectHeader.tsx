@@ -61,10 +61,6 @@ export const ProjectHeader: React.FC<ProjectHeaderProps> = ({
                 <h1 className="text-xl sm:text-2xl font-bold text-on-surface tracking-tight truncate">
                   {project.name}
                 </h1>
-                <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-primary-fixed text-on-primary-fixed flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-primary inline-block"></span>
-                  {project.status === 'andamento' ? 'Em andamento' : 'Concluído'}
-                </span>
               </div>
 
               <p className="text-xs sm:text-sm text-on-surface-variant leading-relaxed mt-1 line-clamp-2 max-w-4xl">

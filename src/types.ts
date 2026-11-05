@@ -5,16 +5,7 @@ export type ScreenType =
   | 'avaliacao-qualidade'
   | 'projeto-ingestao'
   | 'projeto-fontes'
-  | 'auth';
-
-export interface UserProfile {
-  id: string;
-  name: string;
-  email: string;
-  role: string;
-  company?: string;
-  avatarUrl?: string;
-}
+  | 'perfil';
 
 export interface Project {
   id: string;
@@ -23,8 +14,6 @@ export interface Project {
   audiosCount: number;
   docsCount: number;
   filesSummary: string;
-  status: 'andamento' | 'concluido';
-  isFavorite: boolean;
 }
 
 export type StoryStatus = 'Em revisão' | 'Falta Informação' | 'Aprovada' | 'Desaprovada';
