@@ -4,7 +4,7 @@ import { ScreenType, Project, UserProfile } from '../types.ts';
 interface HeaderProps {
   currentScreen: ScreenType;
   onNavigate: (screen: ScreenType) => void;
-  activeProject: Project;
+  activeProject: Project | null;
   projects: Project[];
   onSelectProject: (project: Project) => void;
   currentUser: UserProfile | null;
@@ -52,7 +52,7 @@ export const Header: React.FC<HeaderProps> = ({
               title="Trocar de Projeto"
             >
               <span className="text-on-surface-variant">Projeto:</span>
-              <span className="font-semibold text-primary truncate max-w-[170px] sm:max-w-xs">{activeProject.name}</span>
+              <span className="font-semibold text-primary truncate max-w-[170px] sm:max-w-xs">{activeProject?.name ?? 'Nenhum projeto'}</span>
               <span className="material-symbols-outlined text-[16px] text-on-surface-variant">arrow_drop_down</span>
             </button>
 
@@ -78,13 +78,13 @@ export const Header: React.FC<HeaderProps> = ({
                           }
                         }}
                         className={`w-full text-left px-3 py-2 rounded-lg text-xs flex items-center justify-between transition-colors ${
-                          proj.id === activeProject.id
+                          proj.id === activeProject?.id
                             ? 'bg-primary-fixed text-on-primary-fixed font-semibold'
                             : 'hover:bg-surface-container-low text-on-surface'
                         }`}
                       >
                         <span className="truncate">{proj.name}</span>
-                        {proj.id === activeProject.id && (
+                        {proj.id === activeProject?.id && (
                           <span className="material-symbols-outlined text-[16px] text-primary">check</span>
                         )}
                       </button>

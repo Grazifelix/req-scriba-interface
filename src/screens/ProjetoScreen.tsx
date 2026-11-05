@@ -249,12 +249,16 @@ export const ProjetoScreen: React.FC<ProjetoScreenProps> = ({
 
   const handleProcessFiles = () => {
     setIsProcessing(true);
+    const fileCount = stagedFiles.length;
     showToast('Lendo áudios e documentos via IA...', 'sync');
 
     setTimeout(() => {
       setIsProcessing(false);
       onNavigate('projeto-fontes');
-      showToast('3 áudios e 2 documentos processados e transcritos com sucesso!', 'task_alt');
+      showToast(
+        fileCount === 1 ? '1 arquivo da fila lido com sucesso!' : `${fileCount} arquivos da fila lidos com sucesso!`,
+        'task_alt'
+      );
     }, 1200);
   };
 
@@ -302,7 +306,7 @@ export const ProjetoScreen: React.FC<ProjetoScreenProps> = ({
                       className="cursor-pointer w-full bg-secondary hover:bg-secondary-container text-white text-xs font-semibold px-4 py-2.5 rounded-lg shadow-xs transition-all inline-flex items-center justify-center gap-2"
                     >
                       <span className="material-symbols-outlined text-[18px]">add</span>
-                      <span>+ Selecionar Áudios</span>
+                      <span>Selecionar Áudios</span>
                     </button>
                     <span className="text-[11px] text-on-surface-variant flex items-center gap-1 mt-0.5">
                       <span className="material-symbols-outlined text-[14px]">speed</span>
@@ -333,7 +337,7 @@ export const ProjetoScreen: React.FC<ProjetoScreenProps> = ({
                       className="cursor-pointer w-full bg-primary hover:bg-primary-container text-white text-xs font-semibold px-4 py-2.5 rounded-lg shadow-xs transition-all inline-flex items-center justify-center gap-2"
                     >
                       <span className="material-symbols-outlined text-[18px]">add</span>
-                      <span>+ Selecionar Documentos</span>
+                      <span>Selecionar Documentos</span>
                     </button>
                     <span className="text-[11px] text-on-surface-variant flex items-center gap-1 mt-0.5">
                       <span className="material-symbols-outlined text-[14px]">speed</span>
@@ -506,7 +510,9 @@ export const ProjetoScreen: React.FC<ProjetoScreenProps> = ({
             <div className="flex items-center gap-2.5 text-on-surface">
               <span className="material-symbols-outlined text-tertiary text-[22px]">task_alt</span>
               <span className="text-sm font-semibold">
-                3 áudios de conversa e 2 documentos foram compreendidos com sucesso.
+                {audioSources.length === 1 ? '1 áudio de conversa' : `${audioSources.length} áudios de conversa`} e{' '}
+                {documentSources.length === 1 ? '1 documento' : `${documentSources.length} documentos`}{' '}
+                {audioSources.length + documentSources.length === 1 ? 'foi compreendido' : 'foram compreendidos'} com sucesso.
               </span>
             </div>
             <button

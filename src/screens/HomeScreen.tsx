@@ -117,7 +117,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           </p>
           <button className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-primary text-on-primary text-xs font-semibold shadow-xs group-hover:bg-primary-container transition-all cursor-pointer">
             <span className="material-symbols-outlined text-[16px]">add</span>
-            <span>+ Criar Projeto</span>
+            <span>Criar Projeto</span>
           </button>
         </div>
 

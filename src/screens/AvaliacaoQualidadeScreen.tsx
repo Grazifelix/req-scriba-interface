@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { UserStory, ScreenType, TestCriterion } from '../types.ts';
 
+const SYSTEM_PREFIX = 'o sistema deve';
+
 interface AvaliacaoQualidadeScreenProps {
   story: UserStory;
   allStories: UserStory[];
@@ -162,8 +164,8 @@ export const AvaliacaoQualidadeScreen: React.FC<AvaliacaoQualidadeScreenProps> =
   return (
     <div className="w-full bg-surface pb-16">
       {/* Top Utility Bar / Header Section */}
-      <section className="w-full px-4 sm:px-6 lg:px-8 py-6 bg-white shadow-xs border-b border-outline-variant/30">
-        <div className="max-w-7xl mx-auto flex flex-col gap-4">
+      <section className="w-full py-6 bg-white shadow-xs border-b border-outline-variant/30">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col gap-4">
           {/* Breadcrumb & Navigation */}
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-2 text-xs font-semibold">
@@ -430,7 +432,14 @@ export const AvaliacaoQualidadeScreen: React.FC<AvaliacaoQualidadeScreenProps> =
                       {criterion.then ? (
                         <>
                           <strong className="text-primary font-semibold">Quando</strong> {criterion.when},{' '}
-                          <strong className="text-secondary font-semibold">o sistema deve</strong> {criterion.then}
+                          {criterion.then.startsWith(SYSTEM_PREFIX) ? (
+                            <>
+                              <strong className="text-secondary font-semibold">{SYSTEM_PREFIX}</strong>
+                              {criterion.then.slice(SYSTEM_PREFIX.length)}
+                            </>
+                          ) : (
+                            criterion.then
+                          )}
                         </>
                       ) : (
                         criterion.when

@@ -21,7 +21,7 @@ import { AuthScreen } from './screens/AuthScreen.tsx';
 
 export default function App() {
   // Navigation State - Initial Screen: 1. Home - Meus Projetos
-  const [currentScreen, setCurrentScreen] = useState<ScreenType>('home');
+  const [requestedScreen, setCurrentScreen] = useState<ScreenType>('home');
 
   // Authenticated User Profile
   const [currentUser, setCurrentUser] = useState<UserProfile | null>({
@@ -34,7 +34,11 @@ export default function App() {
 
   // Active Project & List
   const [projects, setProjects] = useState<Project[]>(INITIAL_PROJECTS);
-  const [activeProject, setActiveProject] = useState<Project>(INITIAL_PROJECTS[0]);
+  const [activeProject, setActiveProject] = useState<Project | null>(INITIAL_PROJECTS[0]);
+
+  // Telas de projeto exigem um projeto ativo; sem ele, a Home é exibida.
+  const currentScreen: ScreenType =
+    activeProject || requestedScreen === 'home' || requestedScreen === 'auth' ? requestedScreen : 'home';
 
   // User Stories Backlog
   const [stories, setStories] = useState<UserStory[]>(INITIAL_STORIES);
@@ -82,10 +86,8 @@ export default function App() {
     const projectToDelete = projects.find((p) => p.id === projectId);
     const updatedProjects = projects.filter((p) => p.id !== projectId);
     setProjects(updatedProjects);
-    if (activeProject.id === projectId) {
-      if (updatedProjects.length > 0) {
-        setActiveProject(updatedProjects[0]);
-      }
+    if (activeProject?.id === projectId) {
+      setActiveProject(updatedProjects[0] ?? null);
     }
     triggerToast(`Projeto "${projectToDelete?.name || ''}" excluído com sucesso.`, 'delete');
   };
@@ -95,7 +97,7 @@ export default function App() {
     setProjects((prev) =>
       prev.map((p) => (p.id === updatedProject.id ? updatedProject : p))
     );
-    if (activeProject.id === updatedProject.id) {
+    if (activeProject?.id === updatedProject.id) {
       setActiveProject(updatedProject);
     }
     triggerToast(`Projeto "${updatedProject.name}" atualizado com sucesso!`, 'check_circle');
@@ -106,6 +108,26 @@ export default function App() {
     setActiveProject(project);
     setCurrentScreen('visao-geral');
     triggerToast(`Projeto "${project.name}" aberto com sucesso!`);
+  };
+
+  // Footer shortcuts to project screens
+  const handleOpenProjectScreen = (screen: ScreenType) => {
+    if (!activeProject) {
+      triggerToast('Crie um projeto para acessar esta tela.', 'warning');
+      return;
+    }
+    setCurrentScreen(screen);
+  };
+
+  // Open a story from its id (ex.: a partir de uma pergunta de follow-up)
+  const handleOpenStory = (storyId: string) => {
+    const story = stories.find((s) => s.id === storyId);
+    if (!story) {
+      triggerToast(`Tarefa ${storyId} não encontrada no backlog.`, 'warning');
+      return;
+    }
+    setSelectedStory(story);
+    setCurrentScreen('avaliacao-qualidade');
   };
 
   // Update a single story
@@ -155,7 +177,6 @@ export default function App() {
     setAudioSources((prev) =>
       prev.map((a) => (a.id === updatedAudio.id ? updatedAudio : a))
     );
-    triggerToast(`Transcrição de "${updatedAudio.title}" salva com sucesso!`);
   };
 
   // Auth Handlers
@@ -186,7 +207,7 @@ export default function App() {
       {/* 2. Main Screen Viewport */}
       <main className="w-full flex-1 pt-16 flex flex-col">
         {/* Menu de Navegação do Projeto + Informações do Projeto (Título e Descrição) logo abaixo do menu */}
-        {currentScreen !== 'home' && currentScreen !== 'auth' && (
+        {currentScreen !== 'home' && currentScreen !== 'auth' && activeProject && (
           <div className="w-full">
             <ProjectNav
               currentScreen={currentScreen}
@@ -240,6 +261,7 @@ export default function App() {
             onUpdateQuestion={handleUpdateQuestion}
             onDeleteQuestion={handleDeleteQuestion}
             onAddQuestion={handleAddQuestion}
+            onOpenStory={handleOpenStory}
             onNavigate={setCurrentScreen}
             showToast={triggerToast}
           />
@@ -291,14 +313,14 @@ export default function App() {
             </button>
             <span>•</span>
             <button
-              onClick={() => setCurrentScreen('visao-geral')}
+              onClick={() => handleOpenProjectScreen('visao-geral')}
               className="hover:text-primary transition-colors cursor-pointer"
             >
               Visão Geral
             </button>
             <span>•</span>
             <button
-              onClick={() => setCurrentScreen('follow-up')}
+              onClick={() => handleOpenProjectScreen('follow-up')}
               className="hover:text-primary transition-colors cursor-pointer"
             >
               Follow-up

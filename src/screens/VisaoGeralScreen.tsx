@@ -22,6 +22,10 @@ export const VisaoGeralScreen: React.FC<VisaoGeralScreenProps> = ({
   const missingInfoCount = stories.filter((s) => s.status === 'Falta Informação').length;
   const rejectedCount = stories.filter((s) => s.status === 'Desaprovada').length;
 
+  const averageQuality = totalCount
+    ? Math.round(stories.reduce((sum, s) => sum + s.qualityScore, 0) / totalCount)
+    : null;
+
   const filteredStories = stories.filter((s) => {
     const matchesFilter = activeFilter === 'todos' ? true : s.status === activeFilter;
     const matchesSearch =
@@ -136,7 +140,9 @@ export const VisaoGeralScreen: React.FC<VisaoGeralScreenProps> = ({
               Análise Geral
             </span>
             <div className="flex items-baseline gap-2 mt-1">
-              <span className="text-3xl font-bold text-on-surface tracking-tight">88%</span>
+              <span className="text-3xl font-bold text-on-surface tracking-tight">
+                {averageQuality === null ? '—' : `${averageQuality}%`}
+              </span>
             </div>
             <span className="text-xs text-secondary mt-1 flex items-center gap-1 font-medium">
               <span className="material-symbols-outlined text-[16px]">verified</span>

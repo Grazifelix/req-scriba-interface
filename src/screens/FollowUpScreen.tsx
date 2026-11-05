@@ -1,11 +1,15 @@
 import React, { useState } from 'react';
 import { FollowUpQuestion, ScreenType } from '../types.ts';
 
+const GENERATED_QUESTION =
+  'Qual será o comportamento esperado quando a câmera do celular estiver embaçada ou sem iluminação suficiente?';
+
 interface FollowUpScreenProps {
   questions: FollowUpQuestion[];
   onUpdateQuestion: (question: FollowUpQuestion) => void;
   onDeleteQuestion: (id: string) => void;
   onAddQuestion: (q: Omit<FollowUpQuestion, 'id'>) => void;
+  onOpenStory: (storyId: string) => void;
   onNavigate: (screen: ScreenType) => void;
   showToast: (msg: string, icon?: string) => void;
 }
@@ -15,6 +19,7 @@ export const FollowUpScreen: React.FC<FollowUpScreenProps> = ({
   onUpdateQuestion,
   onDeleteQuestion,
   onAddQuestion,
+  onOpenStory,
   onNavigate,
   showToast,
 }) => {
@@ -23,6 +28,7 @@ export const FollowUpScreen: React.FC<FollowUpScreenProps> = ({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editText, setEditText] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
 
   // New Question Form state
   const [newStoryId, setNewStoryId] = useState('#US02');
@@ -78,11 +84,14 @@ export const FollowUpScreen: React.FC<FollowUpScreenProps> = ({
       .join('\n\n');
 
     const formatted = `ROTEIRO DE REUNIÃO - FOLLOW-UP:\n${script}`;
-    navigator.clipboard?.writeText(formatted).then(() => {
+    const copyFailed = () => showToast('Não foi possível copiar as perguntas. Use "Exportar Lista".', 'error');
+    if (!navigator.clipboard) {
+      copyFailed();
+      return;
+    }
+    navigator.clipboard.writeText(formatted).then(() => {
       showToast('Perguntas do roteiro copiadas para a área de transferência!', 'content_copy');
-    }).catch(() => {
-      showToast('Perguntas copiadas!', 'content_copy');
-    });
+    }).catch(copyFailed);
   };
 
   const handleExportList = () => {
@@ -100,12 +109,18 @@ export const FollowUpScreen: React.FC<FollowUpScreenProps> = ({
   };
 
   const handleAutoGenerate = () => {
+    if (questions.some((q) => q.question === GENERATED_QUESTION)) {
+      showToast('Nenhuma nova dúvida encontrada nas fontes.', 'info');
+      return;
+    }
+    setIsGenerating(true);
     showToast('Varrendo documentos e áudios em busca de novas lacunas...', 'sync');
     setTimeout(() => {
+      setIsGenerating(false);
       onAddQuestion({
         storyId: '#US01',
         storyTitle: 'Autenticação Biométrica no login',
-        question: 'Qual será o comportamento esperado quando a câmera do celular estiver embaçada ou sem iluminação suficiente?',
+        question: GENERATED_QUESTION,
         status: 'Pendente',
         note: 'Detectado na transcrição: Carlos mencionou falha de leitura em ambientes escuros.',
         assignedRole: 'UX Mobile',
@@ -149,18 +164,20 @@ export const FollowUpScreen: React.FC<FollowUpScreenProps> = ({
             className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface text-xs font-semibold transition-all active:scale-95 shadow-xs border border-outline-variant/30 cursor-pointer"
           >
             <span className="material-symbols-outlined text-primary text-[18px]">add</span>
-            <span>+ Nova Pergunta</span>
+            <span>Nova Pergunta</span>
           </button>
           <button
             onClick={handleAutoGenerate}
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-secondary hover:bg-secondary-container text-white text-xs font-semibold transition-all shadow-xs active:scale-95 cursor-pointer"
+            disabled={isGenerating}
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-secondary hover:bg-secondary-container text-white text-xs font-semibold transition-all shadow-xs active:scale-95 disabled:opacity-50 cursor-pointer"
           >
             <span className="material-symbols-outlined text-[18px]">auto_awesome</span>
             <span>Gerar Perguntas</span>
           </button>
           <button
             onClick={handleExportList}
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-primary hover:bg-primary-container text-white text-xs font-semibold transition-all shadow-xs active:scale-95 cursor-pointer"
+            disabled={approvedQuestions.length === 0}
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-primary hover:bg-primary-container text-white text-xs font-semibold transition-all shadow-xs active:scale-95 disabled:opacity-50 cursor-pointer"
           >
             <span className="material-symbols-outlined text-[18px]">download</span>
             <span>Exportar Roteiro</span>
@@ -373,7 +390,7 @@ export const FollowUpScreen: React.FC<FollowUpScreenProps> = ({
                   {/* Actions row */}
                   <div className="flex items-center justify-between pt-2 border-t border-outline-variant/15 flex-wrap gap-2">
                     <button
-                      onClick={() => onNavigate('avaliacao-qualidade')}
+                      onClick={() => onOpenStory(q.storyId)}
                       className="text-xs text-primary hover:underline font-semibold flex items-center gap-1"
                     >
                       <span className="material-symbols-outlined text-[15px]">open_in_new</span>
@@ -534,8 +551,10 @@ export const FollowUpScreen: React.FC<FollowUpScreenProps> = ({
                 >
                   <option value="#US01">#US01 - Autenticação Biométrica no login</option>
                   <option value="#US02">#US02 - Exportação de Extrato em PDF/Excel</option>
+                  <option value="#US03">#US03 - Notificações no Celular</option>
                   <option value="#US04">#US04 - Recuperação de Senha por WhatsApp</option>
                   <option value="#US05">#US05 - Transferência Pix Agendada</option>
+                  <option value="#US06">#US06 - Pagamento de Contas por Código de Barras</option>
                   <option value="#US07">#US07 - Limite Diário Customizável por Canal</option>
                   <option value="#US08">#US08 - Comprovante com Envio Automático por E-mail</option>
                 </select>
