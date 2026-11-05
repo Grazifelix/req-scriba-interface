@@ -6,6 +6,7 @@ const GENERATED_QUESTION =
 
 interface FollowUpScreenProps {
   questions: FollowUpQuestion[];
+  hasSources: boolean;
   onUpdateQuestion: (question: FollowUpQuestion) => void;
   onDeleteQuestion: (id: string) => void;
   onAddQuestion: (q: Omit<FollowUpQuestion, 'id'>) => void;
@@ -16,6 +17,7 @@ interface FollowUpScreenProps {
 
 export const FollowUpScreen: React.FC<FollowUpScreenProps> = ({
   questions,
+  hasSources,
   onUpdateQuestion,
   onDeleteQuestion,
   onAddQuestion,
@@ -161,14 +163,15 @@ export const FollowUpScreen: React.FC<FollowUpScreenProps> = ({
         <div className="flex flex-wrap items-center gap-2 shrink-0">
           <button
             onClick={() => setModalOpen(true)}
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface text-xs font-semibold transition-all active:scale-95 shadow-xs border border-outline-variant/30 cursor-pointer"
+            disabled={!hasSources}
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface text-xs font-semibold transition-all active:scale-95 shadow-xs border border-outline-variant/30 disabled:opacity-50 cursor-pointer"
           >
             <span className="material-symbols-outlined text-primary text-[18px]">add</span>
             <span>Nova Pergunta</span>
           </button>
           <button
             onClick={handleAutoGenerate}
-            disabled={isGenerating}
+            disabled={isGenerating || !hasSources}
             className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-secondary hover:bg-secondary-container text-white text-xs font-semibold transition-all shadow-xs active:scale-95 disabled:opacity-50 cursor-pointer"
           >
             <span className="material-symbols-outlined text-[18px]">auto_awesome</span>
@@ -437,7 +440,19 @@ export const FollowUpScreen: React.FC<FollowUpScreenProps> = ({
               );
             })}
 
-            {filteredQuestions.length === 0 && (
+            {!hasSources && (
+              <div className="bg-white rounded-xl p-8 text-center text-xs text-on-surface-variant shadow-xs flex flex-col items-center gap-3">
+                <span>Este projeto ainda não tem perguntas. Adicione áudios ou documentos para identificá-las.</span>
+                <button
+                  onClick={() => onNavigate('projeto-ingestao')}
+                  className="px-4 py-2 rounded-lg bg-primary hover:bg-primary-container text-white text-xs font-semibold transition-all shadow-xs cursor-pointer"
+                >
+                  Adicionar Fontes
+                </button>
+              </div>
+            )}
+
+            {hasSources && filteredQuestions.length === 0 && (
               <div className="bg-white rounded-xl p-8 text-center text-xs text-on-surface-variant shadow-xs">
                 Nenhuma pergunta encontrada para os filtros atuais.
               </div>

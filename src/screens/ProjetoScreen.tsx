@@ -9,6 +9,7 @@ interface ProjetoScreenProps {
   onRemoveStagedFile: (id: string) => void;
   onClearStagedFiles: () => void;
   onAddStagedFile: (file: StagedFile) => void;
+  onFilesProcessed: (files: StagedFile[]) => void;
   onUpdateAudioSource?: (audio: AudioSource) => void;
   onNavigate: (screen: ScreenType) => void;
   showToast: (msg: string, icon?: string) => void;
@@ -36,6 +37,7 @@ export const ProjetoScreen: React.FC<ProjetoScreenProps> = ({
   onRemoveStagedFile,
   onClearStagedFiles,
   onAddStagedFile,
+  onFilesProcessed,
   onUpdateAudioSource,
   onNavigate,
   showToast,
@@ -254,6 +256,7 @@ export const ProjetoScreen: React.FC<ProjetoScreenProps> = ({
 
     setTimeout(() => {
       setIsProcessing(false);
+      onFilesProcessed(stagedFiles);
       onNavigate('projeto-fontes');
       showToast(
         fileCount === 1 ? '1 arquivo da fila lido com sucesso!' : `${fileCount} arquivos da fila lidos com sucesso!`,
@@ -505,6 +508,18 @@ export const ProjetoScreen: React.FC<ProjetoScreenProps> = ({
             </p>
           </div>
 
+          {audioSources.length + documentSources.length === 0 ? (
+            <div className="bg-white rounded-xl p-8 text-center text-xs text-on-surface-variant shadow-xs border border-outline-variant/30 flex flex-col items-center gap-3">
+              <span>Este projeto ainda não tem fontes. Adicione áudios ou documentos para começar.</span>
+              <button
+                onClick={() => onNavigate('projeto-ingestao')}
+                className="px-4 py-2 rounded-lg bg-primary hover:bg-primary-container text-white text-xs font-semibold transition-all shadow-xs cursor-pointer"
+              >
+                Adicionar Fontes
+              </button>
+            </div>
+          ) : (
+          <>
           {/* Success Banner */}
           <div className="w-full bg-white rounded-xl p-4 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4 border border-outline-variant/30">
             <div className="flex items-center gap-2.5 text-on-surface">
@@ -920,6 +935,8 @@ export const ProjetoScreen: React.FC<ProjetoScreenProps> = ({
               </div>
             </div>
           </div>
+          </>
+          )}
         </div>
       )}
     </div>

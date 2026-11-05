@@ -40,6 +40,9 @@ export default function App() {
   const currentScreen: ScreenType =
     activeProject || requestedScreen === 'home' || requestedScreen === 'auth' ? requestedScreen : 'home';
 
+  // Projeto sem áudios ou documentos não tem backlog, fontes nem perguntas.
+  const projectHasSources = !!activeProject && activeProject.audiosCount + activeProject.docsCount > 0;
+
   // User Stories Backlog
   const [stories, setStories] = useState<UserStory[]>(INITIAL_STORIES);
   const [selectedStory, setSelectedStory] = useState<UserStory>(INITIAL_STORIES[0]);
@@ -79,6 +82,23 @@ export default function App() {
     };
     setProjects((prev) => [newProj, ...prev]);
     setActiveProject(newProj);
+    setStagedFiles([]);
+  };
+
+  // Files read in the ingestion screen become sources of the active project
+  const handleFilesProcessed = (files: StagedFile[]) => {
+    if (!activeProject) return;
+    const audiosCount = activeProject.audiosCount + files.filter((f) => f.type === 'audio').length;
+    const docsCount = activeProject.docsCount + files.filter((f) => f.type !== 'audio').length;
+    const updated: Project = {
+      ...activeProject,
+      audiosCount,
+      docsCount,
+      filesSummary: `${audiosCount} ${audiosCount === 1 ? 'áudio' : 'áudios'} • ${docsCount} ${docsCount === 1 ? 'documento' : 'documentos'}`,
+    };
+    setProjects((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
+    setActiveProject(updated);
+    setStagedFiles([]);
   };
 
   // Delete project handler
@@ -245,7 +265,7 @@ export default function App() {
         {/* Screen 2: Visão Geral (Enxuta) */}
         {currentScreen === 'visao-geral' && (
           <VisaoGeralScreen
-            stories={stories}
+            stories={projectHasSources ? stories : []}
             onSelectStory={(story) => {
               setSelectedStory(story);
               setCurrentScreen('avaliacao-qualidade');
@@ -257,7 +277,8 @@ export default function App() {
         {/* Screen 3: Perguntas de Follow-up (Enxuta) */}
         {currentScreen === 'follow-up' && (
           <FollowUpScreen
-            questions={questions}
+            questions={projectHasSources ? questions : []}
+            hasSources={projectHasSources}
             onUpdateQuestion={handleUpdateQuestion}
             onDeleteQuestion={handleDeleteQuestion}
             onAddQuestion={handleAddQuestion}
@@ -284,11 +305,12 @@ export default function App() {
           <ProjetoScreen
             initialSubTab={currentScreen === 'projeto-fontes' ? 'fontes' : 'ingestao'}
             stagedFiles={stagedFiles}
-            audioSources={audioSources}
-            documentSources={INITIAL_DOCUMENT_SOURCES}
+            audioSources={projectHasSources ? audioSources : []}
+            documentSources={projectHasSources ? INITIAL_DOCUMENT_SOURCES : []}
             onRemoveStagedFile={handleRemoveStagedFile}
             onClearStagedFiles={handleClearStagedFiles}
             onAddStagedFile={handleAddStagedFile}
+            onFilesProcessed={handleFilesProcessed}
             onUpdateAudioSource={handleUpdateAudioSource}
             onNavigate={setCurrentScreen}
             showToast={triggerToast}
