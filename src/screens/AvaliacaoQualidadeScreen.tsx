@@ -1,6 +1,39 @@
 import React, { useState } from 'react';
 import { UserStory, ScreenType, TestCriterion } from '../types.ts';
 
+const SYSTEM_PREFIX = 'o sistema deve';
+const TOTAL_CRITERIA = 13;
+const SIMULATED_ANALYSIS_MS = 1200;
+const SIMULATED_CRITERIA_GAIN = 2;
+
+const parseStoryText = (text: string) => {
+  const match = text.match(/^Como (.+?), eu quero (.+?), para que (.+?)\.?$/);
+  return match ? { actor: match[1], action: match[2], benefit: match[3] } : null;
+};
+
+const qualityLabelFor = (score: number) => {
+  if (score >= 100) return 'Excelente';
+  if (score >= 75) return 'Alta';
+  if (score >= 50) return 'Regular';
+  if (score >= 25) return 'Baixa';
+  return 'Péssima';
+};
+
+// Simula a avaliação QUS da API: a nota é critérios atendidos / 13 x 100.
+const simulateEvaluation = (story: UserStory, criteriaGained: number): UserStory => {
+  const met = Math.min(TOTAL_CRITERIA, Math.round((story.qualityScore * TOTAL_CRITERIA) / 100) + criteriaGained);
+  const qualityScore = Math.round((met * 10000) / TOTAL_CRITERIA) / 100;
+  let remaining = criteriaGained;
+  const heuristics = story.heuristics.map((h) => {
+    if (remaining > 0 && h.status === 'Atenção') {
+      remaining -= 1;
+      return { ...h, status: 'Atendido' as const };
+    }
+    return h;
+  });
+  return { ...story, qualityScore, qualityLabel: qualityLabelFor(qualityScore), qualityOutdated: false, heuristics };
+};
+
 interface AvaliacaoQualidadeScreenProps {
   story: UserStory;
   allStories: UserStory[];
@@ -19,6 +52,9 @@ export const AvaliacaoQualidadeScreen: React.FC<AvaliacaoQualidadeScreenProps> =
   showToast,
 }) => {
   const [isEditing, setIsEditing] = useState(false);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const hasPendingSuggestion = !story.suggestionApplied && !story.suggestionRejected;
+  const suggestionParts = parseStoryText(story.optimizedText);
   const [comoInput, setComoInput] = useState(story.actor || '');
   const [queroInput, setQueroInput] = useState(story.action || '');
   const [paraInput, setParaInput] = useState(story.benefit || '');
@@ -77,6 +113,7 @@ export const AvaliacaoQualidadeScreen: React.FC<AvaliacaoQualidadeScreenProps> =
       benefit: benefitVal,
       originalText: fullStory,
       versions: updatedVersions,
+      qualityOutdated: true,
     });
 
     setIsEditing(false);
@@ -98,17 +135,30 @@ export const AvaliacaoQualidadeScreen: React.FC<AvaliacaoQualidadeScreenProps> =
       ...story.versions.map((v) => ({ ...v, isCurrent: false })),
     ];
 
-    onUpdateStory({
+    const applied: UserStory = {
       ...story,
+      ...suggestionParts,
       originalText: `“${story.optimizedText}”`,
-      qualityScore: Math.min(95, story.qualityScore + 22),
-      qualityLabel: 'Excelente',
-      status: 'Aprovada',
       suggestionApplied: true,
       versions: updatedVersions,
-    });
+      qualityOutdated: true,
+    };
+    onUpdateStory(applied);
 
-    showToast('Sugestão aplicada! Qualidade aumentada para 95%', 'auto_awesome');
+    // A nota vem de uma nova avaliação dos 13 critérios, nunca de um valor fixo.
+    setIsAnalyzing(true);
+    showToast('Sugestão aplicada. Reavaliando os 13 critérios...', 'sync');
+    setTimeout(() => {
+      const evaluated = simulateEvaluation(applied, SIMULATED_CRITERIA_GAIN);
+      onUpdateStory(evaluated);
+      setIsAnalyzing(false);
+      showToast(`Reavaliação concluída: qualidade de ${story.qualityScore}% para ${evaluated.qualityScore}%.`, 'verified');
+    }, SIMULATED_ANALYSIS_MS);
+  };
+
+  const handleRejectSuggestion = () => {
+    onUpdateStory({ ...story, suggestionRejected: true });
+    showToast('Sugestão rejeitada. A User Story foi mantida.');
   };
 
   // Add rule
@@ -128,6 +178,7 @@ export const AvaliacaoQualidadeScreen: React.FC<AvaliacaoQualidadeScreenProps> =
     onUpdateStory({
       ...story,
       criteria: [...story.criteria, newCriterion],
+      qualityOutdated: true,
     });
 
     setNewRuleModalOpen(false);
@@ -140,6 +191,7 @@ export const AvaliacaoQualidadeScreen: React.FC<AvaliacaoQualidadeScreenProps> =
     onUpdateStory({
       ...story,
       criteria: story.criteria.filter((c) => c.id !== id),
+      qualityOutdated: true,
     });
     showToast('Critério removido.');
   };
@@ -153,17 +205,21 @@ export const AvaliacaoQualidadeScreen: React.FC<AvaliacaoQualidadeScreenProps> =
   };
 
   const handleRunAudit = () => {
-    showToast('Analisando heurísticas ISO/IEC/IEEE 29148 e QUS...', 'sync');
+    setIsAnalyzing(true);
+    showToast('Analisando os 13 critérios QUS...', 'sync');
     setTimeout(() => {
-      showToast('Auditoria concluída: 13 heurísticas avaliadas com sucesso!', 'verified');
-    }, 1000);
+      const evaluated = simulateEvaluation(story, 0);
+      onUpdateStory(evaluated);
+      setIsAnalyzing(false);
+      showToast(`Análise concluída: qualidade de ${evaluated.qualityScore}%.`, 'verified');
+    }, SIMULATED_ANALYSIS_MS);
   };
 
   return (
     <div className="w-full bg-surface pb-16">
       {/* Top Utility Bar / Header Section */}
-      <section className="w-full px-4 sm:px-6 lg:px-8 py-6 bg-white shadow-xs border-b border-outline-variant/30">
-        <div className="max-w-7xl mx-auto flex flex-col gap-4">
+      <section className="w-full py-6 bg-white shadow-xs border-b border-outline-variant/30">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col gap-4">
           {/* Breadcrumb & Navigation */}
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-2 text-xs font-semibold">
@@ -182,6 +238,7 @@ export const AvaliacaoQualidadeScreen: React.FC<AvaliacaoQualidadeScreenProps> =
             <div className="flex items-center gap-2">
               <select
                 value={story.id}
+                disabled={isAnalyzing}
                 onChange={(e) => {
                   const found = allStories.find((s) => s.id === e.target.value);
                   if (found) onSelectStory(found);
@@ -338,6 +395,14 @@ export const AvaliacaoQualidadeScreen: React.FC<AvaliacaoQualidadeScreenProps> =
                     <span className="px-2 py-0.5 rounded bg-primary-fixed text-primary text-[11px] font-semibold">
                       {story.qualityLabel}
                     </span>
+                    {story.qualityOutdated && (
+                      <span
+                        className="px-2 py-0.5 rounded bg-[#fef3c7] text-[#92400e] text-[11px] font-semibold"
+                        title="A User Story mudou desde a última análise. Use Analisar a qualidade."
+                      >
+                        {isAnalyzing ? 'Reavaliando...' : 'Desatualizada'}
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>
@@ -365,14 +430,15 @@ export const AvaliacaoQualidadeScreen: React.FC<AvaliacaoQualidadeScreenProps> =
           <div className="flex items-center gap-2 flex-wrap">
             <button
               onClick={handleRunAudit}
+              disabled={isAnalyzing}
               type="button"
-              className="px-3.5 py-1.5 rounded-lg bg-surface-container-low hover:bg-surface-container text-secondary text-xs font-semibold border border-surface-container transition-colors shadow-xs flex items-center gap-1.5 cursor-pointer"
+              className="px-3.5 py-1.5 rounded-lg bg-surface-container-low hover:bg-surface-container text-secondary text-xs font-semibold border border-surface-container transition-colors shadow-xs flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
             >
               <span className="material-symbols-outlined text-[18px]">auto_awesome</span>
               <span>Analisar a qualidade</span>
             </button>
             <button
-              onClick={() => handleStatusChange('Desaprovar' as any)}
+              onClick={() => handleStatusChange('Desaprovada')}
               type="button"
               className="px-3.5 py-1.5 rounded-lg bg-surface-container-low hover:bg-surface-container text-error text-xs font-semibold border border-surface-container transition-colors shadow-xs flex items-center gap-1.5 cursor-pointer"
             >
@@ -430,7 +496,14 @@ export const AvaliacaoQualidadeScreen: React.FC<AvaliacaoQualidadeScreenProps> =
                       {criterion.then ? (
                         <>
                           <strong className="text-primary font-semibold">Quando</strong> {criterion.when},{' '}
-                          <strong className="text-secondary font-semibold">o sistema deve</strong> {criterion.then}
+                          {criterion.then.startsWith(SYSTEM_PREFIX) ? (
+                            <>
+                              <strong className="text-secondary font-semibold">{SYSTEM_PREFIX}</strong>
+                              {criterion.then.slice(SYSTEM_PREFIX.length)}
+                            </>
+                          ) : (
+                            criterion.then
+                          )}
                         </>
                       ) : (
                         criterion.when
@@ -466,14 +539,26 @@ export const AvaliacaoQualidadeScreen: React.FC<AvaliacaoQualidadeScreenProps> =
                 Comparação direta para eliminar ambiguidades mantendo o objetivo original (Heurística 8 & 9)
               </p>
             </div>
-            <button
-              onClick={handleApplySuggestion}
-              type="button"
-              className="px-4 py-2 rounded-lg bg-primary hover:bg-primary-container text-white text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-xs cursor-pointer"
-            >
-              <span className="material-symbols-outlined text-[18px]">check</span>
-              <span>Aplicar Sugestão</span>
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleRejectSuggestion}
+                disabled={!hasPendingSuggestion || isAnalyzing}
+                type="button"
+                className="px-4 py-2 rounded-lg bg-surface-container-low hover:bg-surface-container text-error text-xs font-semibold flex items-center gap-1.5 border border-surface-container transition-colors shadow-xs disabled:opacity-50 cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-[18px]">close</span>
+                <span>Rejeitar</span>
+              </button>
+              <button
+                onClick={handleApplySuggestion}
+                disabled={!hasPendingSuggestion || isAnalyzing}
+                type="button"
+                className="px-4 py-2 rounded-lg bg-primary hover:bg-primary-container text-white text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-xs disabled:opacity-50 cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-[18px]">check</span>
+                <span>Aplicar Sugestão</span>
+              </button>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -486,10 +571,12 @@ export const AvaliacaoQualidadeScreen: React.FC<AvaliacaoQualidadeScreenProps> =
               <p className="text-xs text-on-surface italic leading-relaxed pt-1 bg-white p-3 rounded-lg border border-surface-container">
                 {story.originalText}
               </p>
-              <span className="text-xs text-secondary flex items-center gap-1 pt-1">
-                <span className="material-symbols-outlined text-[15px]">error_outline</span>
-                {story.ambiguityNotice}
-              </span>
+              {hasPendingSuggestion && (
+                <span className="text-xs text-secondary flex items-center gap-1 pt-1">
+                  <span className="material-symbols-outlined text-[15px]">error_outline</span>
+                  {story.ambiguityNotice}
+                </span>
+              )}
             </div>
 
             {/* Sugestão Otimizada */}
@@ -498,15 +585,29 @@ export const AvaliacaoQualidadeScreen: React.FC<AvaliacaoQualidadeScreenProps> =
                 <span className="material-symbols-outlined text-[15px]">auto_awesome</span>
                 Sugestão Otimizada (Recomendada)
               </span>
-              <div className="text-xs text-on-surface leading-relaxed pt-1 bg-white p-3 rounded-lg border border-primary/20">
-                <strong className="text-primary font-bold">Como</strong> {story.actor},{' '}
-                <strong className="text-tertiary font-bold">eu quero</strong> {story.action},{' '}
-                <strong className="text-secondary font-bold">para que</strong> {story.benefit}.
-              </div>
-              <span className="text-xs text-tertiary flex items-center gap-1 pt-1 font-medium">
-                <span className="material-symbols-outlined text-[15px]">check_circle</span>
-                {story.optimizedBenefit}
-              </span>
+              {hasPendingSuggestion ? (
+                <>
+                  <div className="text-xs text-on-surface leading-relaxed pt-1 bg-white p-3 rounded-lg border border-primary/20">
+                    {suggestionParts ? (
+                      <>
+                        <strong className="text-primary font-bold">Como</strong> {suggestionParts.actor},{' '}
+                        <strong className="text-tertiary font-bold">eu quero</strong> {suggestionParts.action},{' '}
+                        <strong className="text-secondary font-bold">para que</strong> {suggestionParts.benefit}.
+                      </>
+                    ) : (
+                      story.optimizedText
+                    )}
+                  </div>
+                  <span className="text-xs text-tertiary flex items-center gap-1 pt-1 font-medium">
+                    <span className="material-symbols-outlined text-[15px]">check_circle</span>
+                    {story.optimizedBenefit}
+                  </span>
+                </>
+              ) : (
+                <div className="text-xs text-on-surface-variant leading-relaxed pt-1 bg-white p-3 rounded-lg border border-primary/20">
+                  Nenhuma sugestão pendente para esta User Story.
+                </div>
+              )}
             </div>
           </div>
         </section>

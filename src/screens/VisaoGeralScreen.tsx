@@ -22,6 +22,10 @@ export const VisaoGeralScreen: React.FC<VisaoGeralScreenProps> = ({
   const missingInfoCount = stories.filter((s) => s.status === 'Falta Informação').length;
   const rejectedCount = stories.filter((s) => s.status === 'Desaprovada').length;
 
+  const averageQuality = totalCount
+    ? Math.round(stories.reduce((sum, s) => sum + s.qualityScore, 0) / totalCount)
+    : null;
+
   const filteredStories = stories.filter((s) => {
     const matchesFilter = activeFilter === 'todos' ? true : s.status === activeFilter;
     const matchesSearch =
@@ -136,7 +140,9 @@ export const VisaoGeralScreen: React.FC<VisaoGeralScreenProps> = ({
               Análise Geral
             </span>
             <div className="flex items-baseline gap-2 mt-1">
-              <span className="text-3xl font-bold text-on-surface tracking-tight">88%</span>
+              <span className="text-3xl font-bold text-on-surface tracking-tight">
+                {averageQuality === null ? '—' : `${averageQuality}%`}
+              </span>
             </div>
             <span className="text-xs text-secondary mt-1 flex items-center gap-1 font-medium">
               <span className="material-symbols-outlined text-[16px]">verified</span>
@@ -299,7 +305,19 @@ export const VisaoGeralScreen: React.FC<VisaoGeralScreenProps> = ({
               </div>
             ))}
 
-            {filteredStories.length === 0 && (
+            {totalCount === 0 && (
+              <div className="p-8 text-center bg-surface-container-low rounded-xl text-xs text-on-surface-variant flex flex-col items-center gap-3">
+                <span>Este projeto ainda não tem User Stories. Adicione áudios ou documentos para criá-las.</span>
+                <button
+                  onClick={() => onNavigate('projeto-ingestao')}
+                  className="px-4 py-2 rounded-lg bg-primary hover:bg-primary-container text-white text-xs font-semibold transition-all shadow-xs cursor-pointer"
+                >
+                  Adicionar Fontes
+                </button>
+              </div>
+            )}
+
+            {totalCount > 0 && filteredStories.length === 0 && (
               <div className="p-8 text-center bg-surface-container-low rounded-xl text-xs text-on-surface-variant">
                 Nenhuma User Story encontrada para este filtro.
               </div>

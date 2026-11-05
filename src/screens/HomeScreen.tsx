@@ -4,15 +4,21 @@ import { Project, ScreenType } from '../types.ts';
 interface HomeScreenProps {
   projects: Project[];
   onOpenProject: (project: Project) => void;
-  onCreateProject: (name: string, description: string) => void;
-  onUpdateProject: (project: Project) => void;
-  onDeleteProject: (projectId: string) => void;
+  isLoading: boolean;
+  loadError: string | null;
+  onRetry: () => void;
+  onCreateProject: (name: string, description: string) => Promise<boolean>;
+  onUpdateProject: (project: Project) => Promise<boolean>;
+  onDeleteProject: (projectId: string) => Promise<boolean>;
   onNavigate: (screen: ScreenType) => void;
   showToast: (msg: string, icon?: string) => void;
 }
 
 export const HomeScreen: React.FC<HomeScreenProps> = ({
   projects,
+  isLoading,
+  loadError,
+  onRetry,
   onOpenProject,
   onCreateProject,
   onUpdateProject,
@@ -21,6 +27,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   showToast,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [newProjectName, setNewProjectName] = useState('');
   const [newProjectDesc, setNewProjectDesc] = useState('');
@@ -38,11 +45,15 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
     );
   });
 
-  const handleCreateSubmit = (e: React.FormEvent) => {
+  const handleCreateSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newProjectName.trim()) return;
+    if (!newProjectName.trim() || isSaving) return;
 
-    onCreateProject(newProjectName.trim(), newProjectDesc.trim());
+    setIsSaving(true);
+    const created = await onCreateProject(newProjectName.trim(), newProjectDesc.trim());
+    setIsSaving(false);
+    if (!created) return;
+
     setModalOpen(false);
     setNewProjectName('');
     setNewProjectDesc('');
@@ -57,16 +68,27 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
     setEditProjectDesc(proj.description);
   };
 
-  const handleEditSubmit = (e: React.FormEvent) => {
+  const handleEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!projectToEdit || !editProjectName.trim()) return;
+    if (!projectToEdit || !editProjectName.trim() || isSaving) return;
 
-    onUpdateProject({
+    setIsSaving(true);
+    const updated = await onUpdateProject({
       ...projectToEdit,
       name: editProjectName.trim(),
       description: editProjectDesc.trim(),
     });
-    setProjectToEdit(null);
+    setIsSaving(false);
+    if (updated) setProjectToEdit(null);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!projectToDelete || isSaving) return;
+
+    setIsSaving(true);
+    const deleted = await onDeleteProject(projectToDelete.id);
+    setIsSaving(false);
+    if (deleted) setProjectToDelete(null);
   };
 
   return (
@@ -100,6 +122,25 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         </div>
       </div>
 
+      {isLoading && (
+        <div role="status" className="p-4 text-center text-xs text-on-surface-variant">
+          Carregando projetos...
+        </div>
+      )}
+
+      {loadError && (
+        <div role="alert" className="bg-white rounded-xl p-6 shadow-xs border border-error/30 flex flex-col items-center gap-3 text-center">
+          <span className="text-xs text-on-surface">{loadError}</span>
+          <button
+            type="button"
+            onClick={onRetry}
+            className="px-4 py-2 rounded-lg bg-primary hover:bg-primary-container text-on-primary text-xs font-semibold transition-all shadow-xs cursor-pointer"
+          >
+            Tentar novamente
+          </button>
+        </div>
+      )}
+
       {/* Projects Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {/* Quick Create Card - Primeiro elemento da grade */}
@@ -117,7 +158,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           </p>
           <button className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-primary text-on-primary text-xs font-semibold shadow-xs group-hover:bg-primary-container transition-all cursor-pointer">
             <span className="material-symbols-outlined text-[16px]">add</span>
-            <span>+ Criar Projeto</span>
+            <span>Criar Projeto</span>
           </button>
         </div>
 
@@ -205,6 +246,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                 <input
                   id="input-nome-projeto"
                   value={newProjectName}
+                  maxLength={200}
                   onChange={(e) => setNewProjectName(e.target.value)}
                   placeholder="Ex: Painel do Cliente, Novo Checkout, Conta Digital..."
                   required
@@ -237,9 +279,10 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2.5 rounded-lg bg-primary hover:bg-primary-container text-on-primary text-xs font-semibold transition-all shadow-xs"
+                  disabled={isSaving}
+                  className="px-5 py-2.5 rounded-lg bg-primary hover:bg-primary-container text-on-primary text-xs font-semibold transition-all shadow-xs disabled:opacity-50"
                 >
-                  Continuar para Anexar Arquivos
+                  {isSaving ? 'Criando...' : 'Continuar para Anexar Arquivos'}
                 </button>
               </div>
             </form>
@@ -276,11 +319,9 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               </button>
               <button
                 type="button"
-                onClick={() => {
-                  onDeleteProject(projectToDelete.id);
-                  setProjectToDelete(null);
-                }}
-                className="px-4 py-2 rounded-lg bg-error hover:bg-error/90 text-white text-xs font-semibold shadow-xs transition-colors cursor-pointer flex items-center gap-1.5"
+                onClick={handleConfirmDelete}
+                disabled={isSaving}
+                className="px-4 py-2 rounded-lg bg-error hover:bg-error/90 text-white text-xs font-semibold shadow-xs transition-colors disabled:opacity-50 cursor-pointer flex items-center gap-1.5"
               >
                 <span className="material-symbols-outlined text-[16px]">delete</span>
                 <span>Confirmar Exclusão</span>
@@ -320,6 +361,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                 <input
                   id="input-edit-nome-projeto"
                   value={editProjectName}
+                  maxLength={200}
                   onChange={(e) => setEditProjectName(e.target.value)}
                   placeholder="Nome do projeto..."
                   required
@@ -352,7 +394,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                 </button>
                 <button
                   type="submit"
-                  className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-lg bg-primary hover:bg-primary-container text-on-primary text-xs font-semibold transition-all shadow-xs cursor-pointer"
+                  disabled={isSaving}
+                  className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-lg bg-primary hover:bg-primary-container text-on-primary text-xs font-semibold transition-all shadow-xs disabled:opacity-50 cursor-pointer"
                 >
                   <span className="material-symbols-outlined text-[16px]">check</span>
                   <span>Salvar Alterações</span>
