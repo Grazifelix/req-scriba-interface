@@ -1,0 +1,230 @@
+<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8"><meta content="width=device-width, initial-scale=1.0" name="viewport"><meta content="web_dashboard" name="shell-type"><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script><script id="tailwind-config">tailwind.config = { darkMode: "class", theme: { extend: { "colors": { "on-tertiary-fixed-variant": "#005236", "surface-tint": "#0053db", "surface-container-high": "#dce9ff", "error": "#ba1a1a", "secondary-fixed": "#e9ddff", "on-tertiary": "#ffffff", "on-primary": "#ffffff", "surface-bright": "#f8f9ff", "inverse-on-surface": "#eaf1ff", "on-background": "#0b1c30", "on-surface-variant": "#434655", "secondary": "#6b38d4", "secondary-fixed-dim": "#d0bcff", "tertiary": "#006242", "on-primary-container": "#eeefff", "primary-container": "#2563eb", "on-secondary": "#ffffff", "surface-container-lowest": "#ffffff", "primary-fixed": "#dbe1ff", "surface-container": "#e5eeff", "tertiary-fixed-dim": "#4edea3", "outline-variant": "#c3c6d7", "secondary-container": "#8455ef", "on-secondary-container": "#fffbff", "on-error": "#ffffff", "surface-dim": "#cbdbf5", "inverse-primary": "#b4c5ff", "on-error-container": "#93000a", "surface": "#f8f9ff", "tertiary-container": "#007d55", "on-secondary-fixed": "#23005c", "surface-variant": "#d3e4fe", "inverse-surface": "#213145", "on-tertiary-container": "#bdffdb", "on-secondary-fixed-variant": "#5516be", "surface-container-highest": "#d3e4fe", "outline": "#737686", "primary": "#004ac6", "on-surface": "#0b1c30", "tertiary-fixed": "#6ffbbe", "primary-fixed-dim": "#b4c5ff", "on-primary-fixed": "#00174b", "on-tertiary-fixed": "#002113", "background": "#f8f9ff", "error-container": "#ffdad6", "on-primary-fixed-variant": "#003ea8", "surface-container-low": "#eff4ff" }, "borderRadius": { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" }, "spacing": { "space-lg": "1.5rem", "margin-tablet": "1.5rem", "margin": "1rem", "gutter-tablet": "1.5rem", "space-xl": "2rem", "space-md": "1rem", "gutter": "1rem", "space-sm": "0.5rem", "space-xs": "0.25rem" }, "fontFamily": { "headline-lg-mobile": [ "Inter" ], "headline-lg": [ "Inter" ], "body-md": [ "Inter" ], "body-sm": [ "Inter" ], "body-lg": [ "Inter" ], "label-md": [ "Inter" ], "label-sm": [ "Inter" ], "headline-sm": [ "Inter" ], "label-lg": [ "Inter" ], "headline-md": [ "Inter" ], "code-md": [ "Inter" ] }, "fontSize": { "headline-lg-mobile": [ "24px", { "lineHeight": "32px", "letterSpacing": "-0.015em", "fontWeight": "700" } ], "headline-lg": [ "30px", { "lineHeight": "38px", "letterSpacing": "-0.02em", "fontWeight": "700" } ], "body-md": [ "14px", { "lineHeight": "22px", "letterSpacing": "0em", "fontWeight": "400" } ], "body-sm": [ "12px", { "lineHeight": "18px", "letterSpacing": "0.01em", "fontWeight": "400" } ], "body-lg": [ "16px", { "lineHeight": "26px", "letterSpacing": "0em", "fontWeight": "400" } ], "label-md": [ "12px", { "lineHeight": "16px", "letterSpacing": "0.02em", "fontWeight": "600" } ], "label-sm": [ "11px", { "lineHeight": "14px", "letterSpacing": "0.03em", "fontWeight": "500" } ], "headline-sm": [ "16px", { "lineHeight": "24px", "letterSpacing": "-0.005em", "fontWeight": "600" } ], "label-lg": [ "14px", { "lineHeight": "20px", "letterSpacing": "0.005em", "fontWeight": "600" } ], "headline-md": [ "20px", { "lineHeight": "28px", "letterSpacing": "-0.01em", "fontWeight": "600" } ], "code-md": [ "13px", { "lineHeight": "20px", "letterSpacing": "0em", "fontWeight": "500" } ] } } } };</script></head><body class="bg-background font-body-md text-on-surface antialiased selection:bg-primary-fixed selection:text-on-primary-fixed min-h-screen flex flex-col">
+<!-- Top Navigation Bar -->
+<header class="fixed top-0 left-0 right-0 h-16 bg-surface-container-lowest border-b border-outline-variant/30 shadow-[0_1px_8px_rgba(0,0,0,0.04)] z-50"><div class="max-w-7xl mx-auto h-full px-space-md sm:px-space-lg flex items-center justify-between gap-space-md">
+<div class="flex items-center gap-space-md flex-shrink-0">
+<div class="flex items-center gap-space-sm">
+<div class="w-9 h-9 rounded-lg flex items-center justify-center overflow-hidden shadow-sm flex-shrink-0"><img alt="ReqScriba Logo" class="w-9 h-9 object-contain rounded-lg" src="https://lh3.googleusercontent.com/aida/AEtjO1W24zsCEEIZqtq79FdhuE_E-7CKcJpM6kRVmtTW43OH5AOlgBhs7elUShdoHYla2pUbazc_6F8QDGTI5_AIigZFWc3AYEUNpj39BLw36pKx-LGzXbv9jKcqpyOWDaJo0VuU5F8F5QEjkpYGwSpT30makfwjKR8Qj0ZWLmIaWH-RPjsV7jPp5rhIwYX2eRBXWlujixjDL06blHjDQiVwjaXp7VLFfPqQ57oFm-ABb3mr"></div>
+<div class="flex flex-col">
+<span class="font-headline-sm text-headline-sm text-on-surface tracking-tight font-bold">ReqScriba</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant hidden sm:inline">Criador de Requisitos</span>
+</div>
+</div>
+<span class="hidden md:block h-5 w-px bg-outline-variant/40"></span>
+<span class="hidden md:inline-flex px-2 py-0.5 rounded bg-surface-container text-on-surface-variant font-label-sm text-label-sm font-semibold tracking-wider uppercase"><span class="" style="font-weight: 500; letter-spacing: 0.33px; text-transform: none; background-color: rgb(239, 244, 255);">Projeto: Conta Digital e Pagamentos</span></span>
+</div>
+<div class="flex items-center gap-space-sm flex-shrink-0">
+</div>
+</div></header>
+<!-- Main Container (Full-width responsive with max-w-7xl centered) -->
+<main class="w-full pt-16 flex-1 flex flex-col"><div class="w-full bg-surface-container-lowest border-b border-outline-variant/30 sticky top-16 z-40 shadow-sm"><div class="max-w-7xl mx-auto px-space-md sm:px-space-lg flex items-center gap-space-sm overflow-x-auto"><a class="flex items-center gap-2 py-2 px-3.5 my-1.5 rounded-lg bg-primary text-on-primary font-label-md text-body-sm font-semibold shadow-sm transition-colors whitespace-nowrap" href="#"><span class="material-symbols-outlined text-[18px]">dashboard</span>Visão Geral</a><a class="flex items-center gap-2 py-2 px-3.5 my-1.5 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container-low font-label-md text-body-sm transition-colors whitespace-nowrap" href="#"><span class="material-symbols-outlined text-[18px]">upload_file</span>Ingestão de dados</a><a class="flex items-center gap-2 py-2 px-3.5 my-1.5 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container-low font-label-md text-body-sm transition-colors whitespace-nowrap" href="#"><span class="material-symbols-outlined text-[18px]">database</span>Fontes de Dados</a><a class="flex items-center gap-2 py-2 px-3.5 my-1.5 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container-low font-label-md text-body-sm transition-colors whitespace-nowrap" href="#"><span class="material-symbols-outlined text-[18px]">help_outline</span>Perguntas de Follow-up</a></div></div>
+<div class="w-full max-w-7xl mx-auto px-space-md sm:px-space-lg py-space-lg flex flex-col gap-space-lg">
+<!-- Sub-header / Overview Banner with ambient gradient glow -->
+<!-- KPI Summary Grid (4 Columns) -->
+<section class="grid grid-cols-1 sm:grid-cols-3 gap-space-md"><div class="p-space-md rounded-xl bg-surface-container-lowest border border-outline-variant/30 shadow-[0_1px_3px_0_rgba(15,23,42,0.04)] flex items-center justify-between"><div class="flex flex-col"><span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider font-semibold">User Stories Prontas</span><div class="flex items-baseline gap-space-sm mt-1"><span class="font-headline-lg text-headline-lg text-on-surface tracking-tight font-bold">3</span><span class="px-2 py-0.5 rounded-full bg-tertiary-fixed text-on-tertiary-fixed-variant font-label-sm text-label-sm font-semibold">Aprovadas</span></div><span class="font-body-sm text-body-sm text-tertiary-container mt-1 flex items-center gap-1 font-medium"><span class="material-symbols-outlined text-[16px]">check_circle</span>37,5%% do total concluído</span></div><div class="w-12 h-12 rounded-xl bg-tertiary-fixed flex items-center justify-center text-on-tertiary-fixed-variant shadow-sm"><span class="material-symbols-outlined text-[26px]">task_alt</span></div></div><div class="p-space-md rounded-xl bg-surface-container-lowest border border-outline-variant/30 shadow-[0_1px_3px_0_rgba(15,23,42,0.04)] flex items-center justify-between"><div class="flex flex-col"><span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider font-semibold">Em Revisão</span><div class="flex items-baseline gap-space-sm mt-1"><span class="font-headline-lg text-headline-lg text-on-surface tracking-tight font-bold">4</span><span class="px-2 py-0.5 rounded-full bg-primary-fixed text-on-primary-fixed font-label-sm text-label-sm font-semibold">Pendentes</span></div><span class="font-body-sm text-body-sm text-primary mt-1 flex items-center gap-1 font-medium"><span class="material-symbols-outlined text-[16px]">pending_actions</span> Aguardando aprovação</span></div><div class="w-12 h-12 rounded-xl bg-primary-fixed flex items-center justify-center text-on-primary-fixed shadow-sm"><span class="material-symbols-outlined text-[26px]">hourglass_empty</span></div></div><div class="p-space-md rounded-xl bg-surface-container-lowest border border-outline-variant/30 shadow-[0_1px_3px_0_rgba(15,23,42,0.04)] flex items-center justify-between"><div class="flex flex-col"><span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider font-semibold">Análise geral</span><div class="flex items-baseline gap-space-sm mt-1"><span class="font-headline-lg text-headline-lg text-on-surface tracking-tight font-bold">88%</span></div><span class="font-body-sm text-body-sm text-secondary mt-1 flex items-center gap-1 font-medium"><span class="material-symbols-outlined text-[16px]">verified</span> Qualidade do Backlog</span></div><div class="w-12 h-12 rounded-xl bg-secondary-fixed flex items-center justify-center text-on-secondary-fixed shadow-sm"><span class="material-symbols-outlined text-[26px]">auto_awesome</span></div></div></section>
+<!-- Action Bar / Quick Actions Banner -->
+<!-- Main Split View: 2-Column Responsive Layout -->
+<div class="grid gap-space-lg items-start w-full">
+<!-- Central/Left Column: User Stories in Progress (8 Cols) -->
+<section class="flex flex-col gap-space-md w-full">
+<div class="p-space-md rounded-xl bg-surface-container-lowest border border-outline-variant/30 shadow-[0_1px_3px_0_rgba(15,23,42,0.04)] flex flex-col gap-space-md">
+<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-space-sm pb-space-sm border-b border-outline-variant/30">
+<div class="flex items-center gap-space-sm">
+<div class="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-[20px]">format_list_bulleted</span>
+</div>
+<div>
+<h3 class="font-headline-sm text-headline-sm text-on-surface font-semibold">Backlog</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant">O que o sistema deve fazer explicado passo a passo</p>
+</div>
+</div>
+<div class="flex flex-wrap items-center gap-1.5"><button class="h-8 px-3 rounded-full bg-primary text-on-primary font-label-sm text-label-sm font-semibold shadow-sm transition-colors cursor-pointer flex items-center gap-1.5">Todos os Status <span class="px-1.5 py-0.2 rounded-full bg-surface-container-lowest/20 font-code-md text-label-sm font-bold">8</span></button><button class="h-8 px-3 rounded-full bg-surface-container hover:bg-surface-container-high border border-outline-variant/30 text-on-surface-variant hover:text-on-surface font-label-sm text-label-sm font-medium transition-colors cursor-pointer flex items-center gap-1.5"><span class="material-symbols-outlined text-[14px]">schedule</span>Em revisão <span class="px-1.5 py-0.2 rounded-full bg-surface-container-high font-code-md text-label-sm font-semibold text-on-surface-variant">2</span></button><button class="h-8 px-3 rounded-full bg-surface-container hover:bg-surface-container-high border border-outline-variant/30 text-on-surface-variant hover:text-on-surface font-label-sm text-label-sm font-medium transition-colors cursor-pointer flex items-center gap-1.5"><span class="material-symbols-outlined text-[14px]">warning</span>Falta Informação <span class="px-1.5 py-0.2 rounded-full bg-surface-container-high font-code-md text-label-sm font-semibold text-on-surface-variant">2</span></button><button class="h-8 px-3 rounded-full bg-surface-container hover:bg-surface-container-high border border-outline-variant/30 text-on-surface-variant hover:text-on-surface font-label-sm text-label-sm font-medium transition-colors cursor-pointer flex items-center gap-1.5"><span class="material-symbols-outlined text-[14px]">check_circle</span>Aprovada <span class="px-1.5 py-0.2 rounded-full bg-surface-container-high font-code-md text-label-sm font-semibold text-on-surface-variant">3</span></button><button class="h-8 px-3 rounded-full bg-surface-container hover:bg-surface-container-high border border-outline-variant/30 text-on-surface-variant hover:text-on-surface font-label-sm text-label-sm font-medium transition-colors cursor-pointer flex items-center gap-1.5"><span class="material-symbols-outlined text-[14px]">cancel</span>Desaprovada <span class="px-1.5 py-0.2 rounded-full bg-surface-container-high font-code-md text-label-sm font-semibold text-on-surface-variant">1</span></button></div>
+<!-- Story 5 -->
+
+<!-- Story 6 -->
+
+<!-- Story 7 -->
+
+<!-- Story 8 -->
+</div>
+<div class="flex flex-col gap-space-sm">
+<!-- Story 1 -->
+<div class="p-space-md rounded-lg bg-surface-container-low/60 hover:bg-surface-container-low transition-colors shadow-sm border border-outline-variant/20 flex flex-col sm:flex-row sm:items-center justify-between gap-space-md">
+<div class="flex items-center gap-space-md flex-1 min-w-0">
+<div class="w-16 flex-shrink-0 flex items-center justify-center py-1 rounded bg-primary-fixed text-on-primary-fixed font-code-md text-code-md font-bold">
+                  #US01
+                </div>
+<div class="flex-1 min-w-0">
+<h4 class="font-headline-sm text-headline-sm text-on-surface truncate font-semibold">Autenticação Biométrica no login</h4>
+<p class="font-body-sm text-body-sm text-on-surface-variant truncate">Permitir que o cliente entre no app usando reconhecimento facial para maior rapidez e segurança</p>
+</div>
+</div>
+<div class="flex items-center justify-between sm:justify-end gap-space-md flex-shrink-0">
+<span class="px-2.5 py-1 rounded-full bg-surface-container text-on-surface-variant font-label-sm text-label-sm font-semibold flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">schedule</span> Em revisão</span>
+<button class="h-8 px-space-md rounded-md bg-surface-container hover:bg-surface-container-high text-on-surface font-label-md text-label-md transition-colors">
+                  Ver análise</button>
+</div>
+</div>
+<!-- Story 2 -->
+<div class="p-space-md rounded-lg bg-surface-container-low/60 hover:bg-surface-container-low transition-colors shadow-sm border border-outline-variant/20 flex flex-col sm:flex-row sm:items-center justify-between gap-space-md">
+<div class="flex items-center gap-space-md flex-1 min-w-0">
+<div class="w-16 flex-shrink-0 flex items-center justify-center py-1 rounded bg-error-container text-on-error-container font-code-md text-code-md font-bold">
+                  #US02
+                </div>
+<div class="flex-1 min-w-0">
+<h4 class="font-headline-sm text-headline-sm text-on-surface truncate font-semibold">Exportação de Extrato em PDF/Excel</h4>
+<p class="font-body-sm text-body-sm text-on-surface-variant truncate">Possibilitar baixar a movimentação financeira para conferir os gastos e organizar a contabilidade</p>
+</div>
+</div>
+<div class="flex items-center justify-between sm:justify-end gap-space-md flex-shrink-0">
+<span class="px-2.5 py-1 rounded-full bg-[#fef3c7] text-[#92400e] border border-[#fde68a] font-label-sm text-label-sm font-semibold flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">warning</span> Falta Informação</span>
+<button class="h-8 px-space-md rounded-md bg-surface-container hover:bg-surface-container-high text-on-surface font-label-md text-label-md transition-colors"><span style="letter-spacing: 0.24px; background-color: rgb(229, 238, 255);" class="">Ver análise</span></button>
+</div>
+</div>
+<!-- Story 3 -->
+<div class="p-space-md rounded-lg bg-surface-container-low/60 hover:bg-surface-container-low transition-colors shadow-sm border border-outline-variant/20 flex flex-col sm:flex-row sm:items-center justify-between gap-space-md">
+<div class="flex items-center gap-space-md flex-1 min-w-0">
+<div class="w-16 flex-shrink-0 flex items-center justify-center py-1 rounded bg-tertiary-fixed text-on-tertiary-fixed-variant font-code-md text-code-md font-bold">
+                  #US03
+                </div>
+<div class="flex-1 min-w-0">
+<h4 class="font-headline-sm text-headline-sm text-on-surface truncate font-semibold">Notificações no Celular</h4>
+<p class="font-body-sm text-body-sm text-on-surface-variant truncate">Enviar avisos no celular na mesma hora em que pagamentos ou transferências Pix forem realizados</p>
+</div>
+</div>
+<div class="flex items-center justify-between sm:justify-end gap-space-md flex-shrink-0">
+<span class="px-2.5 py-1 rounded-full bg-tertiary-fixed text-on-tertiary-fixed-variant font-label-sm text-label-sm font-semibold flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">check_circle</span> Aprovada
+                </span>
+<button class="h-8 px-space-md rounded-md bg-surface-container hover:bg-surface-container-high text-on-surface font-label-md text-label-md transition-colors"><span style="letter-spacing: 0.24px; background-color: rgb(229, 238, 255);" class="">Ver análise</span></button>
+</div>
+</div>
+<!-- Story 4 -->
+<div class="p-space-md rounded-lg bg-surface-container-low/60 hover:bg-surface-container-low transition-colors shadow-sm border border-outline-variant/20 flex flex-col sm:flex-row sm:items-center justify-between gap-space-md">
+<div class="flex items-center gap-space-md flex-1 min-w-0">
+<div class="w-16 flex-shrink-0 flex items-center justify-center py-1 rounded bg-surface-container text-on-surface-variant font-code-md text-code-md font-bold">
+                  #US04
+                </div>
+<div class="flex-1 min-w-0">
+<h4 class="font-headline-sm text-headline-sm text-on-surface truncate font-semibold">Recuperação de Senha pelo WhatsApp</h4>
+<p class="font-body-sm text-body-sm text-on-surface-variant truncate">Ajudar o usuário que esqueceu a senha a desbloquear a conta com um código de segurança enviado no WhatsApp</p>
+</div>
+</div>
+<div class="flex items-center justify-between sm:justify-end gap-space-md flex-shrink-0">
+<span class="px-2.5 py-1 rounded-full bg-error-container text-on-error-container font-label-sm text-label-sm font-semibold flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">cancel</span> Desaprovada</span>
+<button class="h-8 px-space-md rounded-md bg-surface-container hover:bg-surface-container-high text-on-surface font-label-md text-label-md transition-colors"><span style="letter-spacing: 0.24px; background-color: rgb(229, 238, 255);" class="">Ver análise</span></button>
+</div>
+</div>
+<!-- Story 5 -->
+<div class="p-space-md rounded-lg bg-surface-container-low/60 hover:bg-surface-container-low transition-colors shadow-sm border border-outline-variant/20 flex flex-col sm:flex-row sm:items-center justify-between gap-space-md">
+<div class="flex items-center gap-space-md flex-1 min-w-0">
+<div class="w-16 flex-shrink-0 flex items-center justify-center py-1 rounded bg-primary-fixed text-on-primary-fixed font-code-md text-code-md font-bold">
+                  #US05
+                </div>
+<div class="flex-1 min-w-0">
+<h4 class="font-headline-sm text-headline-sm text-on-surface truncate font-semibold">Transferência Pix Agendada</h4>
+<p class="font-body-sm text-body-sm text-on-surface-variant truncate">Permitir programação de transferências Pix para datas futuras com confirmação via SMS</p>
+</div>
+</div>
+<div class="flex items-center justify-between sm:justify-end gap-space-md flex-shrink-0">
+<span class="px-2.5 py-1 rounded-full bg-surface-container text-on-surface-variant font-label-sm text-label-sm font-semibold flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">schedule</span> Em revisão</span>
+<button class="h-8 px-space-md rounded-md bg-surface-container hover:bg-surface-container-high text-on-surface font-label-md text-label-md transition-colors"><span style="letter-spacing: 0.24px; background-color: rgb(229, 238, 255);" class="">Ver análise</span></button>
+</div>
+</div>
+<!-- Story 6 -->
+<div class="p-space-md rounded-lg bg-surface-container-low/60 hover:bg-surface-container-low transition-colors shadow-sm border border-outline-variant/20 flex flex-col sm:flex-row sm:items-center justify-between gap-space-md">
+<div class="flex items-center gap-space-md flex-1 min-w-0">
+<div class="w-16 flex-shrink-0 flex items-center justify-center py-1 rounded bg-tertiary-fixed text-on-tertiary-fixed-variant font-code-md text-code-md font-bold">
+                  #US06
+                </div>
+<div class="flex-1 min-w-0">
+<h4 class="font-headline-sm text-headline-sm text-on-surface truncate font-semibold">Pagamento de Contas por Código de Barras</h4>
+<p class="font-body-sm text-body-sm text-on-surface-variant truncate">Escanear ou digitar linha digitável para pagamento de boletos de consumo e tributos</p>
+</div>
+</div>
+<div class="flex items-center justify-between sm:justify-end gap-space-md flex-shrink-0">
+<span class="px-2.5 py-1 rounded-full bg-tertiary-fixed text-on-tertiary-fixed-variant font-label-sm text-label-sm font-semibold flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">check_circle</span> Aprovada
+                </span>
+<button class="h-8 px-space-md rounded-md bg-surface-container hover:bg-surface-container-high text-on-surface font-label-md text-label-md transition-colors"><span style="letter-spacing: 0.24px; background-color: rgb(229, 238, 255);" class="">Ver análise</span></button>
+</div>
+</div>
+<!-- Story 7 -->
+<div class="p-space-md rounded-lg bg-surface-container-low/60 hover:bg-surface-container-low transition-colors shadow-sm border border-outline-variant/20 flex flex-col sm:flex-row sm:items-center justify-between gap-space-md">
+<div class="flex items-center gap-space-md flex-1 min-w-0">
+<div class="w-16 flex-shrink-0 flex items-center justify-center py-1 rounded bg-error-container text-on-error-container font-code-md text-code-md font-bold">
+                  #US07
+                </div>
+<div class="flex-1 min-w-0">
+<h4 class="font-headline-sm text-headline-sm text-on-surface truncate font-semibold">Limite Diário Customizável por Canal</h4>
+<p class="font-body-sm text-body-sm text-on-surface-variant truncate">Ajuste independente de limite financeiro diário para transações noturnas e diurnas</p>
+</div>
+</div>
+<div class="flex items-center justify-between sm:justify-end gap-space-md flex-shrink-0">
+<span class="px-2.5 py-1 rounded-full bg-[#fef3c7] text-[#92400e] border border-[#fde68a] font-label-sm text-label-sm font-semibold flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">warning</span> Falta Informação</span>
+<button class="h-8 px-space-md rounded-md bg-surface-container hover:bg-surface-container-high text-on-surface font-label-md text-label-md transition-colors"><span style="letter-spacing: 0.24px; background-color: rgb(229, 238, 255);" class="">Ver análise</span></button>
+</div>
+</div>
+<!-- Story 8 -->
+<div class="p-space-md rounded-lg bg-surface-container-low/60 hover:bg-surface-container-low transition-colors shadow-sm border border-outline-variant/20 flex flex-col sm:flex-row sm:items-center justify-between gap-space-md">
+<div class="flex items-center gap-space-md flex-1 min-w-0">
+<div class="w-16 flex-shrink-0 flex items-center justify-center py-1 rounded bg-tertiary-fixed text-on-tertiary-fixed-variant font-code-md text-code-md font-bold">
+                  #US08
+                </div>
+<div class="flex-1 min-w-0">
+<h4 class="font-headline-sm text-headline-sm text-on-surface truncate font-semibold">Comprovante com Envio Automático por E-mail</h4>
+<p class="font-body-sm text-body-sm text-on-surface-variant truncate">Opção de envio automático do comprovante em PDF para contabilidade cadastrada</p>
+</div>
+</div>
+<div class="flex items-center justify-between sm:justify-end gap-space-md flex-shrink-0">
+<span class="px-2.5 py-1 rounded-full bg-tertiary-fixed text-on-tertiary-fixed-variant font-label-sm text-label-sm font-semibold flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">check_circle</span> Aprovada
+                </span>
+<button class="h-8 px-space-md rounded-md bg-surface-container hover:bg-surface-container-high text-on-surface font-label-md text-label-md transition-colors"><span style="letter-spacing: 0.24px; background-color: rgb(229, 238, 255);" class="">Ver análise</span></button>
+</div>
+</div></div>
+<div class="flex items-center justify-between pt-space-xs text-on-surface-variant font-body-sm text-body-sm">
+<span class="">Mostrando 8 de 8 User Stories</span>
+<div class="flex items-center gap-space-xs">
+
+
+
+</div>
+</div>
+</div>
+</section>
+<!-- Right Column: AI Insights, Recommendations & Status (4 Cols) -->
+</div>
+</div>
+</main>
+<script>
+  // Simple micro-interaction for quick filter demo
+  document.addEventListener('DOMContentLoaded', () => {
+    const searchInput = document.querySelector('input[placeholder*="Filtrar"]');
+    if (searchInput) {
+      searchInput.addEventListener('input', (e) => {
+        const query = e.target.value.toLowerCase();
+        const cards = document.querySelectorAll('section > div > div.flex.flex-col.gap-space-sm > div');
+        cards.forEach(card => {
+          const text = card.textContent.toLowerCase();
+          if (text.includes(query)) {
+            card.style.display = 'flex';
+          } else {
+            card.style.display = 'none';
+          }
+        });
+      });
+    }
+  });
+</script>
+
+
+
+
+
+
+
+
+
+
+</body></html>
