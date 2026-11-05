@@ -68,6 +68,8 @@ export interface UserStory {
   originalText: string;
   optimizedText: string;
   suggestionApplied: boolean;
+  suggestionRejected?: boolean;
+  qualityOutdated?: boolean;
   ambiguityNotice: string;
   optimizedBenefit: string;
   criteria: TestCriterion[];
