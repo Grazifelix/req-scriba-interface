@@ -101,7 +101,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             <h1 className="text-2xl sm:text-3xl font-bold text-on-surface tracking-tight">Meus Projetos</h1>
           </div>
           <p className="text-xs sm:text-sm text-on-surface-variant mt-1">
-            Selecione um projeto para gerenciar tarefas, auditar User Stories e verificar conformidade com ISO/IEC/IEEE 29148:2018.
+            Acesse seus projetos e crie novas User Stories a partir de áudios e/ou documentos.
           </p>
         </div>
       </div>
@@ -154,7 +154,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           </div>
           <h3 className="text-base font-bold text-on-surface mb-1">Criar Novo Projeto</h3>
           <p className="text-xs text-on-surface-variant max-w-xs mb-4">
-            Adicione novos requisitos a partir de áudios ou documentos.
+            Crie projetos e gerencie suas User Stories com qualidade
           </p>
           <button className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-primary text-on-primary text-xs font-semibold shadow-xs group-hover:bg-primary-container transition-all cursor-pointer">
             <span className="material-symbols-outlined text-[16px]">add</span>

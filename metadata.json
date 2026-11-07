@@ -1,6 +1,5 @@
 {
   "name": "ReqScriba",
   "description": "Criação e análise inteligente de User Stories com rastreabilidade de áudios e documentos, roteiro de follow-up e validação de qualidade ágil.",
-  "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+  "requestFramePermissions": []
 }
