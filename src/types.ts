@@ -1,8 +1,9 @@
-export type ScreenType = 
+export type ScreenType =
   | 'home'
   | 'visao-geral'
   | 'follow-up'
   | 'avaliacao-qualidade'
+  | 'novo-requisito'
   | 'projeto-ingestao'
   | 'projeto-fontes'
   | 'perfil';
@@ -14,117 +15,161 @@ export interface Project {
   audiosCount: number;
   docsCount: number;
   filesSummary: string;
+  qualityScore: number | null;
+  qualityLabel: string;
 }
 
 export type StoryStatus = 'Em revisão' | 'Falta Informação' | 'Aprovada' | 'Desaprovada';
 
 export interface TestCriterion {
   id: string;
-  number: number;
   title: string;
-  category: string;
-  when: string;
-  then: string;
+  criterion: string;
 }
 
+export type HeuristicCategory = '1. Estrutura do Texto' | '2. Sentido e Negócio' | '3. Prática e Execução';
+
 export interface HeuristicItem {
-  id: number;
+  id: string;
   name: string;
-  status: 'Atendido' | 'Atenção';
+  status: 'Atendido' | 'Atenção' | 'Não atende';
   description: string;
   tip?: string;
-  category: '1. Estrutura do Texto' | '2. Sentido e Negócio' | '3. Prática e Execução';
+  category: HeuristicCategory;
 }
 
 export interface StoryVersion {
   version: string;
   type: string;
+  isAi: boolean;
+  author: string;
   timestamp: string;
   text: string;
-  isCurrent?: boolean;
+  isCurrent: boolean;
 }
 
-export interface UserStory {
+export interface AudioEvidence {
   id: string;
+  title: string;
+  timestamp: string;
+  quote: string;
+  url: string;
+}
+
+export interface DocumentEvidence {
+  id: string;
+  title: string;
+  page: string;
+  quote: string;
+}
+
+export interface StorySummary {
+  id: string;
+  code: string;
   title: string;
   summary: string;
   status: StoryStatus;
-  qualityScore: number;
+  qualityScore: number | null;
   qualityLabel: string;
+  hasMissingInfo: boolean;
+}
+
+export interface UserStory extends StorySummary {
   actor: string;
   action: string;
   benefit: string;
-  originalText: string;
-  optimizedText: string;
-  suggestionApplied: boolean;
-  suggestionRejected?: boolean;
-  qualityOutdated?: boolean;
-  ambiguityNotice: string;
-  optimizedBenefit: string;
   criteria: TestCriterion[];
-  hasAttentionGap?: boolean;
-  attentionGapMessage?: string;
-  sources: {
-    audio?: {
-      title: string;
-      timestamp: string;
-      quote: string;
-      durationLabel: string;
-      durationSec: number;
-      audioUrl?: string;
-    };
-    doc?: {
-      title: string;
-      page: string;
-      quote: string;
-      docUrl?: string;
-    };
-  };
+  qualityOutdated: boolean;
+  qualityRewrite: string | null;
+  missingInfo: string[];
+  unsupportedClaims: string[];
+  audioEvidence: AudioEvidence[];
+  documentEvidence: DocumentEvidence[];
   heuristics: HeuristicItem[];
   versions: StoryVersion[];
 }
 
+export type QuestionStatus = 'Pendente' | 'Aprovada' | 'Respondida' | 'Rejeitada';
+
 export interface FollowUpQuestion {
   id: string;
   storyId: string;
+  storyCode: string;
   storyTitle: string;
   question: string;
-  status: 'Pendente' | 'Aprovada' | 'Respondida';
-  note?: string;
-  assignedRole?: string;
-  answer?: string;
+  note: string;
+  status: QuestionStatus;
+  answer: string | null;
 }
+
+export type SourceStatus = 'pendente' | 'processando' | 'concluido' | 'erro';
 
 export interface AudioSource {
   id: string;
   title: string;
-  durationLabel: string;
-  durationSec: number;
-  status: 'Transcrito' | 'Processando';
-  dialogues: Array<{
-    timestamp: string;
-    speaker: string;
-    text: string;
-  }>;
+  durationLabel: string | null;
+  status: SourceStatus;
+  statusLabel: string;
+  errorMessage: string | null;
+  canRetry: boolean;
+  url: string;
 }
 
 export interface DocumentSource {
   id: string;
   title: string;
-  category: string;
-  readPercentage: string;
-  type: 'pdf' | 'xlsx';
-  sections: Array<{
-    heading: string;
-    content: string[];
-  }>;
+  isSpreadsheet: boolean;
+  status: SourceStatus;
+  statusLabel: string;
+  errorMessage: string | null;
+  canRetry: boolean;
+  pageCount: number | null;
+}
+
+export interface TranscriptSegment {
+  id: string;
+  text: string;
+  startSec: number;
+  endSec: number;
+  startLabel: string;
+  edited: boolean;
 }
 
 export interface StagedFile {
   id: string;
-  name: string;
-  size: string;
+  file: File;
   type: 'audio' | 'pdf' | 'spreadsheet';
   typeLabel: string;
-  status: 'Pronto' | 'Enviando';
+  errorMessage?: string;
+}
+
+export interface Suggestion {
+  id: string;
+  storyId: string | null;
+  storyCode: string | null;
+  type: string;
+  typeLabel: string;
+  justification: string;
+  proposedText: string;
+  proposedTitle: string;
+  proposedCriteria: string[];
+  currentText: string | null;
+  changedFields: string[];
+}
+
+export type JobStatus = SourceStatus;
+
+export interface Job {
+  id: string;
+  typeLabel: string;
+  isAnalysis: boolean;
+  status: JobStatus;
+  statusLabel: string;
+  errorMessage: string | null;
+  createdAt: string;
+  audioIds: number[];
+  documentIds: number[];
+  createdCount: number;
+  resultMessage: string | null;
+  failureCount: number;
 }

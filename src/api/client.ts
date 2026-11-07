@@ -41,10 +41,11 @@ const toApiError = async (response: Response): Promise<ApiError> => {
 interface RequestOptions {
   method?: 'GET' | 'POST' | 'PATCH' | 'DELETE';
   body?: unknown;
+  form?: FormData;
 }
 
 // Sem timeout próprio: a avaliação QUS e a geração de perguntas rodam o LLM dentro da requisição.
-export const apiRequest = async <T>(path: string, { method = 'GET', body }: RequestOptions = {}): Promise<T> => {
+export const apiRequest = async <T>(path: string, { method = 'GET', body, form }: RequestOptions = {}): Promise<T> => {
   const headers: Record<string, string> = {};
   if (body !== undefined) headers['Content-Type'] = 'application/json';
   const userName = getUserName();
@@ -55,7 +56,7 @@ export const apiRequest = async <T>(path: string, { method = 'GET', body }: Requ
     response = await fetch(`${API_URL}${API_PREFIX}${path}`, {
       method,
       headers,
-      body: body === undefined ? undefined : JSON.stringify(body),
+      body: form ?? (body === undefined ? undefined : JSON.stringify(body)),
     });
   } catch {
     throw new ApiError(0, 'sem_conexao', NETWORK_ERROR_MESSAGE);
@@ -64,6 +65,9 @@ export const apiRequest = async <T>(path: string, { method = 'GET', body }: Requ
   if (!response.ok) throw await toApiError(response);
   return (response.status === 204 ? undefined : await response.json()) as T;
 };
+
+// As URLs retornadas pela API são relativas à raiz dela.
+export const apiFileUrl = (relativeUrl: string): string => new URL(relativeUrl, API_URL).href;
 
 export const errorMessage = (error: unknown): string =>
   error instanceof Error ? error.message : 'Ocorreu um erro inesperado.';

@@ -17,6 +17,8 @@ const toProject = (p: ProjectOut): Project => ({
   audiosCount: p.total_audios,
   docsCount: p.total_documentos,
   filesSummary: formatFilesSummary(p.total_audios, p.total_documentos),
+  qualityScore: p.qualidade_geral.porcentagem ?? null,
+  qualityLabel: p.qualidade_geral.status,
 });
 
 export const listProjects = async (): Promise<Project[]> => {
