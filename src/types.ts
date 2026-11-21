@@ -155,6 +155,8 @@ export interface Suggestion {
   proposedCriteria: string[];
   currentText: string | null;
   changedFields: string[];
+  audioEvidence: AudioEvidence[];
+  documentEvidence: DocumentEvidence[];
 }
 
 export type JobStatus = SourceStatus;

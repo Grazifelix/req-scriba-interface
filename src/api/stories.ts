@@ -99,16 +99,29 @@ const toVersions = (s: StoryOut): StoryVersion[] =>
       isCurrent: v.numero === s.versao_atual,
     }));
 
-const toAudioEvidence = (e: StoryOut['fontes_audio'][number]): AudioEvidence => ({
-  id: String(e.evidencia_id),
+// Fontes de uma HU (com evidencia_id) ou de uma sugestão (só trecho_id, ainda não gravadas).
+type SourceExcerpt = {
+  evidencia_id?: number | null;
+  trecho_id?: number | null;
+  nome_arquivo: string;
+  trecho: string;
+  inicio_formatado?: unknown;
+  url_momento?: unknown;
+  pagina?: unknown;
+};
+
+const excerptId = (e: SourceExcerpt, index: number) => String(e.evidencia_id ?? e.trecho_id ?? `trecho-${index}`);
+
+export const toAudioEvidence = (e: SourceExcerpt, index = 0): AudioEvidence => ({
+  id: excerptId(e, index),
   title: e.nome_arquivo,
   timestamp: String(e.inicio_formatado ?? ''),
   quote: e.trecho,
   url: e.url_momento ? apiFileUrl(String(e.url_momento)) : '',
 });
 
-const toDocumentEvidence = (e: StoryOut['fontes_documentos'][number]): DocumentEvidence => ({
-  id: String(e.evidencia_id),
+export const toDocumentEvidence = (e: SourceExcerpt, index = 0): DocumentEvidence => ({
+  id: excerptId(e, index),
   title: e.nome_arquivo,
   page: e.pagina ? `Página ${e.pagina}` : 'Documento',
   quote: e.trecho,

@@ -293,6 +293,93 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/projetos/{projeto_id}/analises": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Listar análises do projeto
+         * @description Uma análise por geração de histórias (mais recente primeiro), com sistema, participantes, usuários, requisitos de negócio, funcionalidades e itens fora de escopo.
+         */
+        get: operations["list_analyses_api_v1_projetos__projeto_id__analises_get"];
+        put?: never;
+        /** Criar análise manualmente */
+        post: operations["create_analysis_api_v1_projetos__projeto_id__analises_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/analises/{analise_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Detalhar análise */
+        get: operations["get_analysis_api_v1_analises__analise_id__get"];
+        put?: never;
+        post?: never;
+        /**
+         * Excluir análise
+         * @description Remove a análise e seus itens. As histórias geradas não são afetadas.
+         */
+        delete: operations["delete_analysis_api_v1_analises__analise_id__delete"];
+        options?: never;
+        head?: never;
+        /**
+         * Editar análise ou marcá-la como revisada
+         * @description Com `revisada: true`, a análise passa a orientar as próximas gerações do projeto (vale a revisada mais recente).
+         */
+        patch: operations["update_analysis_api_v1_analises__analise_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/analises/{analise_id}/itens": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Adicionar item à análise
+         * @description Requisitos de negócio e funcionalidades recebem códigos RN/FN automaticamente.
+         */
+        post: operations["add_item_api_v1_analises__analise_id__itens_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/analises/{analise_id}/itens/{item_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Excluir item da análise
+         * @description Ao excluir um requisito de negócio, ele é removido das referências das funcionalidades.
+         */
+        delete: operations["delete_item_api_v1_analises__analise_id__itens__item_id__delete"];
+        options?: never;
+        head?: never;
+        /** Editar item da análise */
+        patch: operations["update_item_api_v1_analises__analise_id__itens__item_id__patch"];
+        trace?: never;
+    };
     "/api/v1/projetos/{projeto_id}/historias/gerar": {
         parameters: {
             query?: never;
@@ -833,12 +920,187 @@ export interface components {
         } & {
             [key: string]: unknown;
         };
+        /** AnalysisCreate */
+        AnalysisCreate: {
+            /**
+             * Sistema
+             * @example Pedidos por tablet na mesa do restaurante
+             */
+            sistema?: string | null;
+            /**
+             * Revisada
+             * @default false
+             */
+            revisada: boolean;
+            /** Itens */
+            itens?: components["schemas"]["AnalysisItemCreate"][];
+        };
+        /** AnalysisEvidenceOut */
+        AnalysisEvidenceOut: {
+            /** Trecho Id */
+            trecho_id: number;
+            /** Tipo Fonte */
+            tipo_fonte: string;
+            /** Fonte Id */
+            fonte_id: number;
+            /** Nome Arquivo */
+            nome_arquivo: string;
+            /** Texto */
+            texto: string;
+            /** Localizacao */
+            localizacao: {
+                [key: string]: unknown;
+            };
+        } & {
+            [key: string]: unknown;
+        };
+        /** AnalysisItemCreate */
+        AnalysisItemCreate: {
+            /**
+             * Tipo
+             * @description participante | usuario | requisito_negocio | funcionalidade | fora_de_escopo
+             * @enum {string}
+             */
+            tipo: "participante" | "usuario" | "requisito_negocio" | "funcionalidade" | "fora_de_escopo";
+            /**
+             * Texto
+             * @description Nome, papel ou descrição, conforme o tipo
+             * @example cliente
+             */
+            texto: string;
+            /**
+             * Complemento
+             * @description Papel na reunião (participante), descrição (usuário), usuário (funcionalidade) ou motivo (fora de escopo)
+             */
+            complemento?: string | null;
+            /**
+             * Referencias
+             * @description Somente funcionalidades: códigos dos requisitos de negócio atendidos (ex.: RN1)
+             */
+            referencias?: string[];
+            /**
+             * Trecho Ids
+             * @description Trechos das fontes que sustentam o item
+             */
+            trecho_ids?: number[];
+        };
+        /** AnalysisItemOut */
+        AnalysisItemOut: {
+            /** Id */
+            id: number;
+            /** Analise Id */
+            analise_id: number;
+            /** Tipo */
+            tipo: string;
+            /** Tipo Rotulo */
+            tipo_rotulo: string;
+            /**
+             * Codigo
+             * @description RN1, FN1… (requisitos de negócio e funcionalidades)
+             */
+            codigo: string | null;
+            /** Texto */
+            texto: string;
+            /** Complemento */
+            complemento: string | null;
+            /** Referencias */
+            referencias: string[];
+            /** Evidencias */
+            evidencias: components["schemas"]["AnalysisEvidenceOut"][];
+            /** Possui Evidencia */
+            possui_evidencia: boolean;
+            /**
+             * Historia Ids
+             * @description Histórias geradas a partir da funcionalidade
+             */
+            historia_ids: number[];
+            /**
+             * Origem
+             * @description ia | manual
+             */
+            origem: string;
+            /** Editado */
+            editado: boolean;
+        } & {
+            [key: string]: unknown;
+        };
+        /** AnalysisItemUpdate */
+        AnalysisItemUpdate: {
+            /** Texto */
+            texto?: string | null;
+            /** Complemento */
+            complemento?: string | null;
+            /** Referencias */
+            referencias?: string[] | null;
+            /**
+             * Trecho Ids
+             * @description Substitui as evidências do item
+             */
+            trecho_ids?: number[] | null;
+        };
+        /** AnalysisList */
+        AnalysisList: {
+            /** Itens */
+            itens: components["schemas"]["AnalysisOut"][];
+            /** Total */
+            total: number;
+        } & {
+            [key: string]: unknown;
+        };
+        /** AnalysisOut */
+        AnalysisOut: {
+            /** Id */
+            id: number;
+            /** Projeto Id */
+            projeto_id: number;
+            /** Job Id */
+            job_id: string | null;
+            /**
+             * Origem
+             * @description ia | manual
+             */
+            origem: string;
+            /** Sistema */
+            sistema: string | null;
+            /** Fontes */
+            fontes: {
+                [key: string]: unknown;
+            }[];
+            /** Revisada */
+            revisada: boolean;
+            /** Revisada Por */
+            revisada_por: string | null;
+            /** Revisada Em */
+            revisada_em: string | null;
+            /** Totais */
+            totais: {
+                [key: string]: number;
+            };
+            /** Itens */
+            itens: components["schemas"]["AnalysisItemOut"][];
+            /** Criado Em */
+            criado_em: string;
+            /** Atualizado Em */
+            atualizado_em: string;
+        } & {
+            [key: string]: unknown;
+        };
         /** AnalysisRequest */
         AnalysisRequest: {
             /** Audio Ids */
             audio_ids?: number[];
             /** Documento Ids */
             documento_ids?: number[];
+        };
+        /** AnalysisUpdate */
+        AnalysisUpdate: {
+            /** Sistema */
+            sistema?: string | null;
+            /**
+             * Revisada
+             * @description True: a análise passa a ser usada como contexto confirmado nas próximas gerações
+             */
+            revisada?: boolean | null;
         };
         /** AudioList */
         AudioList: {
@@ -1667,6 +1929,20 @@ export interface components {
             };
             /** Evidencias */
             evidencias: {
+                [key: string]: unknown;
+            }[];
+            /**
+             * Fontes Audio
+             * @description Trechos de áudio que embasam a sugestão (com minuto e URL do momento)
+             */
+            fontes_audio?: {
+                [key: string]: unknown;
+            }[];
+            /**
+             * Fontes Documentos
+             * @description Trechos de documentos que embasam a sugestão (com página)
+             */
+            fontes_documentos?: {
                 [key: string]: unknown;
             }[];
             /** Status */
@@ -2992,6 +3268,488 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DocumentOut"];
+                };
+            };
+            /** @description Recurso não encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflito de estado */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Entrada inválida ou regra de negócio violada */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Falha em serviço externo (LLM, embeddings, ChromaDB, ASR) */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_analyses_api_v1_projetos__projeto_id__analises_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                projeto_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AnalysisList"];
+                };
+            };
+            /** @description Recurso não encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflito de estado */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Entrada inválida ou regra de negócio violada */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Falha em serviço externo (LLM, embeddings, ChromaDB, ASR) */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    create_analysis_api_v1_projetos__projeto_id__analises_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-usuario"?: string | null;
+            };
+            path: {
+                projeto_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AnalysisCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AnalysisOut"];
+                };
+            };
+            /** @description Recurso não encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflito de estado */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Entrada inválida ou regra de negócio violada */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Falha em serviço externo (LLM, embeddings, ChromaDB, ASR) */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_analysis_api_v1_analises__analise_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                analise_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AnalysisOut"];
+                };
+            };
+            /** @description Recurso não encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflito de estado */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Entrada inválida ou regra de negócio violada */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Falha em serviço externo (LLM, embeddings, ChromaDB, ASR) */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    delete_analysis_api_v1_analises__analise_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                analise_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Recurso não encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflito de estado */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Entrada inválida ou regra de negócio violada */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Falha em serviço externo (LLM, embeddings, ChromaDB, ASR) */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    update_analysis_api_v1_analises__analise_id__patch: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-usuario"?: string | null;
+            };
+            path: {
+                analise_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AnalysisUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AnalysisOut"];
+                };
+            };
+            /** @description Recurso não encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflito de estado */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Entrada inválida ou regra de negócio violada */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Falha em serviço externo (LLM, embeddings, ChromaDB, ASR) */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    add_item_api_v1_analises__analise_id__itens_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                analise_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AnalysisItemCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AnalysisItemOut"];
+                };
+            };
+            /** @description Recurso não encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflito de estado */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Entrada inválida ou regra de negócio violada */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Falha em serviço externo (LLM, embeddings, ChromaDB, ASR) */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    delete_item_api_v1_analises__analise_id__itens__item_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                analise_id: number;
+                item_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Recurso não encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflito de estado */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Entrada inválida ou regra de negócio violada */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Falha em serviço externo (LLM, embeddings, ChromaDB, ASR) */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    update_item_api_v1_analises__analise_id__itens__item_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                analise_id: number;
+                item_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AnalysisItemUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AnalysisItemOut"];
                 };
             };
             /** @description Recurso não encontrado */

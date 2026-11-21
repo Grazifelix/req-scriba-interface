@@ -2,8 +2,10 @@ import { useQuery } from '@tanstack/react-query';
 import { Suggestion } from '../types.ts';
 import { apiRequest } from './client.ts';
 import type { components } from './schema';
+import { toAudioEvidence, toDocumentEvidence } from './stories.ts';
 
 type SuggestionOut = components['schemas']['SuggestionOut'];
+type SourceExcerptOut = Parameters<typeof toAudioEvidence>[0];
 type SuggestionList = components['schemas']['SuggestionList'];
 
 const FIELD_LABELS: Record<string, string> = {
@@ -37,6 +39,8 @@ const toSuggestion = (s: SuggestionOut): Suggestion => {
     proposedCriteria: (proposed.criterios_aceitacao ?? []).map((c) => c.criterio ?? '').filter(Boolean),
     currentText: ((s.conteudo_atual as { historia?: string } | null)?.historia) ?? null,
     changedFields: (comparison?.campos_alterados ?? []).map((f) => FIELD_LABELS[f] ?? f),
+    audioEvidence: (s.fontes_audio ?? []).map((e, i) => toAudioEvidence(e as SourceExcerptOut, i)),
+    documentEvidence: (s.fontes_documentos ?? []).map((e, i) => toDocumentEvidence(e as SourceExcerptOut, i)),
   };
 };
 

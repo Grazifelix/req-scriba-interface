@@ -4,6 +4,7 @@ import { errorMessage } from '../api/client.ts';
 import { PROJECTS_QUERY_KEY } from '../api/projects.ts';
 import { evaluateStory, storiesKey } from '../api/stories.ts';
 import { approveSuggestion, rejectSuggestion, suggestionsKey, useSuggestion } from '../api/suggestions.ts';
+import { SourceEvidenceList } from '../components/SourceEvidenceList.tsx';
 import { StoryText } from '../components/StoryText.tsx';
 import { SuggestionPanel } from '../components/SuggestionPanel.tsx';
 import { Project, ScreenType } from '../types.ts';
@@ -111,6 +112,14 @@ export const NovoRequisitoScreen: React.FC<NovoRequisitoScreenProps> = ({
           </ul>
         </section>
       )}
+
+      <SourceEvidenceList
+        audioEvidence={suggestion.audioEvidence}
+        documentEvidence={suggestion.documentEvidence}
+        onOpenSources={() => onNavigate('projeto-fontes')}
+        subtitle="Trechos das novas fontes em que a IA se baseou para esta sugestão"
+        emptyText="A IA não vinculou trechos das fontes a esta sugestão."
+      />
     </div>
   );
 };
