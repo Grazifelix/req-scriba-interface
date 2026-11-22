@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   addAnalysisItem,
@@ -8,9 +8,10 @@ import {
   updateAnalysis,
   updateAnalysisItem,
   useAnalysis,
+  useLatestAnalysis,
 } from '../api/analyses.ts';
 import { errorMessage } from '../api/client.ts';
-import { startAnalysis, startGeneration } from '../api/jobs.ts';
+import { isJobActive, startAnalysis, startGeneration, useJobs } from '../api/jobs.ts';
 import { PROJECTS_QUERY_KEY, listProjects, updateProject } from '../api/projects.ts';
 import { AnalysisItem, AnalysisItemType } from '../types.ts';
 
@@ -47,20 +48,46 @@ type Draft = { text: string; complement: string };
 type Busy = null | 'item' | 'saving' | 'starting';
 
 const inputClass =
-  'w-full px-2.5 py-1.5 text-xs bg-white border border-outline-variant/40 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary/40 text-on-surface';
+  'w-full px-2.5 py-1.5 text-xs bg-white border border-outline-variant/40 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary/40 text-on-surface disabled:bg-surface disabled:text-on-surface-variant';
+
+// Só um modal de análise aberto por vez: o que abre por último fecha os demais (ex.: o modal de revisão
+// que abre ao fim de um job, por cima de um "Visualizar Análise" que ficou aberto).
+const OPEN_EVENT = 'reqscriba:modal-analise-aberto';
 
 export const AnalysisReviewModal: React.FC<Props> = ({
   projectId,
-  analysisId,
+  analysisId: initialAnalysisId,
   audioIds = [],
   documentIds = [],
   hasStories = false,
   onClose,
   onStarted,
 }) => {
-  const canCreate = onStarted !== undefined;
+  // Pode trocar para a análise mais recente quando esta for substituída ("Abrir análise atual").
+  const [analysisId, setAnalysisId] = useState(initialAnalysisId);
+  // Criar tarefas usa as fontes do job que gerou a análise inicial; outra análise abre só para visualizar.
+  const canCreate = onStarted !== undefined && analysisId === initialAnalysisId;
   const queryClient = useQueryClient();
   const { data: analysis, isPending, error: loadError } = useAnalysis(analysisId);
+  const { data: jobs = [] } = useJobs(projectId);
+  const { data: latest } = useLatestAnalysis(projectId);
+  // A API recusa edições nos dois casos (409); aqui a tela já fica somente leitura e explica o motivo.
+  const analysisRunning = jobs.some((j) => j.type === 'analise_fontes' && isJobActive(j));
+  // Ids são crescentes: comparar evita o falso aviso enquanto a lista ainda traz a análise anterior.
+  const isStale = latest != null && Number(latest.id) > Number(analysisId);
+  const locked = analysisRunning || isStale;
+
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+  useEffect(() => {
+    const token = Symbol('modal-analise');
+    window.dispatchEvent(new CustomEvent(OPEN_EVENT, { detail: token }));
+    const closeIfOther = (e: Event) => {
+      if ((e as CustomEvent).detail !== token) onCloseRef.current();
+    };
+    window.addEventListener(OPEN_EVENT, closeIfOther);
+    return () => window.removeEventListener(OPEN_EVENT, closeIfOther);
+  }, []);
   // Mesmo cache da lista de projetos do App: o título é o nome dado ao criar o projeto.
   const { data: projects = [] } = useQuery({ queryKey: PROJECTS_QUERY_KEY, queryFn: listProjects });
   const project = projects.find((p) => p.id === projectId);
@@ -118,7 +145,8 @@ export const AnalysisReviewModal: React.FC<Props> = ({
   };
 
   const handleClose = () => {
-    if (!isDirty) {
+    // Bloqueada, a API recusaria as alterações: elas são descartadas (o aviso no modal explica).
+    if (!isDirty || locked) {
       onClose();
       return;
     }
@@ -163,6 +191,17 @@ export const AnalysisReviewModal: React.FC<Props> = ({
     });
 
   const isBusy = busy !== null;
+  const readOnly = isBusy || locked;
+
+  const openLatest = () => {
+    if (!latest) return;
+    setDrafts({});
+    setTitleDraft(null);
+    setSystemDraft(null);
+    setAdding(null);
+    setError(null);
+    setAnalysisId(latest.id);
+  };
 
   return (
     <div className="fixed inset-0 z-50 bg-[#213145]/40 backdrop-blur-sm flex items-center justify-center p-4">
@@ -189,6 +228,32 @@ export const AnalysisReviewModal: React.FC<Props> = ({
         </div>
 
         <div className="flex-1 overflow-y-auto px-6 py-4 flex flex-col gap-5">
+          {analysisRunning && (
+            <div role="status" className="flex items-start gap-2 text-xs text-on-surface bg-primary-fixed/30 border border-primary/20 rounded-lg px-3 py-2.5">
+              <span className="inline-block w-3.5 h-3.5 mt-0.5 border-2 border-primary border-t-transparent rounded-full animate-spin shrink-0"></span>
+              <span>
+                Há uma análise das fontes em andamento. A edição fica bloqueada até ela terminar, porque a nova
+                análise parte desta e não receberia as alterações feitas agora.
+                {isDirty && ' As alterações ainda não salvas serão descartadas ao fechar.'}
+              </span>
+            </div>
+          )}
+          {!analysisRunning && isStale && (
+            <div role="alert" className="flex items-center justify-between gap-3 flex-wrap text-xs text-on-surface bg-tertiary-fixed/40 border border-tertiary/20 rounded-lg px-3 py-2.5">
+              <span>
+                Uma análise mais nova foi gerada. Esta ficou só para consulta: edite a análise atual.
+                {isDirty && ' As alterações ainda não salvas serão descartadas.'}
+              </span>
+              <button
+                type="button"
+                onClick={openLatest}
+                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-white hover:bg-surface-container border border-outline-variant/30 text-primary text-xs font-semibold shadow-2xs cursor-pointer shrink-0"
+              >
+                <span className="material-symbols-outlined text-[16px]">open_in_new</span>
+                <span>Abrir análise atual</span>
+              </button>
+            </div>
+          )}
           {isPending && <p role="status" className="text-xs text-on-surface-variant">Carregando análise...</p>}
           {loadError && <p role="alert" className="text-xs text-error">{errorMessage(loadError)}</p>}
 
@@ -201,7 +266,7 @@ export const AnalysisReviewModal: React.FC<Props> = ({
                   onChange={(e) => setTitleDraft(e.target.value)}
                   maxLength={200}
                   required
-                  disabled={isBusy || !project}
+                  disabled={readOnly || !project}
                   placeholder="Ex: Painel do Cliente, Novo Checkout, Conta Digital..."
                   className={`${inputClass} text-sm font-semibold`}
                 />
@@ -214,7 +279,7 @@ export const AnalysisReviewModal: React.FC<Props> = ({
                   onChange={(e) => setSystemDraft(e.target.value)}
                   rows={3}
                   maxLength={2000}
-                  disabled={isBusy}
+                  disabled={readOnly}
                   placeholder="Qual sistema, produto ou solução está sendo discutido"
                   className={`${inputClass} resize-none leading-relaxed`}
                 />
@@ -236,7 +301,7 @@ export const AnalysisReviewModal: React.FC<Props> = ({
                         <button
                           type="button"
                           onClick={() => setAdding({ type: section.type, text: '', complement: '' })}
-                          disabled={isBusy}
+                          disabled={readOnly}
                           className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-primary hover:bg-primary/5 text-xs font-semibold shrink-0 disabled:opacity-50 cursor-pointer"
                         >
                           <span className="material-symbols-outlined text-[16px]">add</span>
@@ -274,7 +339,7 @@ export const AnalysisReviewModal: React.FC<Props> = ({
                               aria-label={`${section.title}: texto`}
                               value={value.text}
                               maxLength={500}
-                              disabled={isBusy}
+                              disabled={readOnly}
                               onChange={(e) => setValue({ text: e.target.value })}
                               className={inputClass}
                             />
@@ -283,7 +348,7 @@ export const AnalysisReviewModal: React.FC<Props> = ({
                                 aria-label={`${section.title}: ${section.complementLabel.toLowerCase()}`}
                                 value={value.complement}
                                 maxLength={500}
-                                disabled={isBusy}
+                                disabled={readOnly}
                                 placeholder={section.complementLabel}
                                 onChange={(e) => setValue({ complement: e.target.value })}
                                 className={`${inputClass} text-on-surface-variant`}
@@ -294,7 +359,7 @@ export const AnalysisReviewModal: React.FC<Props> = ({
                             type="button"
                             title="Excluir item"
                             onClick={() => handleDelete(item)}
-                            disabled={isBusy}
+                            disabled={readOnly}
                             className="p-1 rounded text-outline hover:text-error hover:bg-error/10 transition-colors disabled:opacity-50 cursor-pointer"
                           >
                             <span className="material-symbols-outlined text-[18px]">delete_outline</span>
@@ -310,7 +375,7 @@ export const AnalysisReviewModal: React.FC<Props> = ({
                           autoFocus
                           value={adding.text}
                           maxLength={500}
-                          disabled={isBusy}
+                          disabled={readOnly}
                           placeholder={section.placeholder}
                           onChange={(e) => setAdding({ ...adding, text: e.target.value })}
                           onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
@@ -321,7 +386,7 @@ export const AnalysisReviewModal: React.FC<Props> = ({
                             aria-label={`Novo item em ${section.title}: ${section.complementLabel.toLowerCase()}`}
                             value={adding.complement}
                             maxLength={500}
-                            disabled={isBusy}
+                            disabled={readOnly}
                             placeholder={`${section.complementLabel} (opcional)`}
                             onChange={(e) => setAdding({ ...adding, complement: e.target.value })}
                             className={inputClass}
@@ -331,7 +396,7 @@ export const AnalysisReviewModal: React.FC<Props> = ({
                           <button type="button" onClick={() => setAdding(null)} disabled={isBusy} className="px-3 py-1 rounded-lg text-on-surface-variant hover:bg-surface-container text-xs font-semibold cursor-pointer">
                             Cancelar
                           </button>
-                          <button type="button" onClick={handleAdd} disabled={isBusy} className="px-3 py-1 rounded-lg bg-primary hover:bg-primary-container text-white text-xs font-semibold shadow-xs disabled:opacity-50 cursor-pointer">
+                          <button type="button" onClick={handleAdd} disabled={readOnly} className="px-3 py-1 rounded-lg bg-primary hover:bg-primary-container text-white text-xs font-semibold shadow-xs disabled:opacity-50 cursor-pointer">
                             {busy === 'item' ? 'Adicionando...' : 'Adicionar item'}
                           </button>
                         </div>
@@ -363,13 +428,13 @@ export const AnalysisReviewModal: React.FC<Props> = ({
                 disabled={isBusy}
                 className="px-4 py-2 rounded-lg text-xs font-semibold text-on-surface-variant hover:bg-surface-container transition-colors disabled:opacity-50 cursor-pointer"
               >
-                {busy === 'saving' && !canCreate ? 'Salvando…' : isDirty ? 'Salvar e fechar' : 'Fechar'}
+                {busy === 'saving' && !canCreate ? 'Salvando…' : isDirty && !locked ? 'Salvar e fechar' : 'Fechar'}
               </button>
               {canCreate && (
                 <button
                   type="button"
                   onClick={handleCreate}
-                  disabled={isBusy || !analysis}
+                  disabled={readOnly || !analysis}
                   className="px-4 py-2 rounded-lg bg-primary hover:bg-primary/90 text-white text-xs font-semibold shadow-xs transition-colors disabled:opacity-50 cursor-pointer flex items-center gap-1.5"
                 >
                   <span className="material-symbols-outlined text-[16px]">task_alt</span>
