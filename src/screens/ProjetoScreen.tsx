@@ -1,7 +1,8 @@
 import React, { useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useLatestAnalysis } from '../api/analyses.ts';
 import { errorMessage } from '../api/client.ts';
-import { isJobActive, startAnalysis, startGeneration, useJobs } from '../api/jobs.ts';
+import { isJobActive, startSourceAnalysis, useJobs } from '../api/jobs.ts';
 import { PROJECTS_QUERY_KEY } from '../api/projects.ts';
 import {
   audiosKey,
@@ -21,7 +22,8 @@ import {
   useDocuments,
 } from '../api/sources.ts';
 import { useStories } from '../api/stories.ts';
-import { AudioSource, DocumentSource, Project, ScreenType, SourceStatus, StagedFile, TranscriptSegment } from '../types.ts';
+import { AnalysisReviewModal } from '../components/AnalysisReviewModal.tsx';
+import { AudioSource, DocumentSource, Job, Project, ScreenType, SourceStatus, StagedFile, TranscriptSegment } from '../types.ts';
 
 const AUDIO_ACCEPT = '.mp3,.wav,.m4a,.ogg,.flac,.webm,.mp4';
 const DOCUMENT_ACCEPT = '.pdf,.docx,.txt,.md';
@@ -357,11 +359,13 @@ export const ProjetoScreen: React.FC<ProjetoScreenProps> = ({
   const documentInput = useRef<HTMLInputElement>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isStartingJob, setIsStartingJob] = useState(false);
+  const [isReviewOpen, setIsReviewOpen] = useState(false);
 
   const audiosQuery = useAudios(project.id);
   const documentsQuery = useDocuments(project.id);
   const { data: jobs = [] } = useJobs(project.id);
   const { data: stories = [] } = useStories(project.id);
+  const { data: latestAnalysis } = useLatestAnalysis(project.id);
   const audios = audiosQuery.data ?? [];
   const documents = documentsQuery.data ?? [];
 
@@ -412,9 +416,12 @@ export const ProjetoScreen: React.FC<ProjetoScreenProps> = ({
     }
   };
 
-  // Fontes ainda não usadas por nenhum job concluído
-  const usedAudios = new Set(jobs.filter((j) => j.status === 'concluido').flatMap((j) => j.audioIds.map(String)));
-  const usedDocuments = new Set(jobs.filter((j) => j.status === 'concluido').flatMap((j) => j.documentIds.map(String)));
+  // Fontes ainda não usadas para criar tarefas (a análise das fontes sozinha não as consome)
+  const taskJobs = jobs.filter(
+    (j) => j.status === 'concluido' && (j.type === 'geracao_historias' || j.type === 'analise_atualizacao')
+  );
+  const usedAudios = new Set(taskJobs.flatMap((j) => j.audioIds.map(String)));
+  const usedDocuments = new Set(taskJobs.flatMap((j) => j.documentIds.map(String)));
   const readyAudios = audios.filter((a) => a.status === 'concluido').map((a) => a.id);
   const readyDocuments = documents.filter((d) => d.status === 'concluido').map((d) => d.id);
   const newAudios = readyAudios.filter((id) => !usedAudios.has(id));
@@ -426,12 +433,19 @@ export const ProjetoScreen: React.FC<ProjetoScreenProps> = ({
   const hasInput = hasStories ? newAudios.length + newDocuments.length > 0 : readyAudios.length + readyDocuments.length > 0;
   const jobRunning = jobs.some(isJobActive);
 
+  // Análise gerada pela IA e ainda não aprovada: pode ser reaberta para revisão.
+  const pendingReviewJob: Job | undefined =
+    latestAnalysis && !latestAnalysis.reviewed && latestAnalysis.jobId
+      ? jobs.find((j) => j.id === latestAnalysis.jobId && j.status === 'concluido')
+      : undefined;
+
   const handleStartJob = async () => {
     setIsStartingJob(true);
     try {
-      if (hasStories) await startAnalysis(queryClient, project.id, newAudios, newDocuments);
-      else await startGeneration(queryClient, project.id, readyAudios, readyDocuments);
-      onNavigate('visao-geral');
+      // Com histórias, só as fontes novas; sem histórias, todas as prontas.
+      if (hasStories) await startSourceAnalysis(queryClient, project.id, newAudios, newDocuments);
+      else await startSourceAnalysis(queryClient, project.id, readyAudios, readyDocuments);
+      showToast('Analisando as fontes. O resultado aparece aqui para você revisar.', 'psychology');
     } catch (e) {
       showToast(errorMessage(e), 'error');
     } finally {
@@ -599,7 +613,8 @@ export const ProjetoScreen: React.FC<ProjetoScreenProps> = ({
           <div>
             <h1 className="text-3xl font-bold text-on-surface tracking-tight">Arquivos Compreendidos pelo Sistema</h1>
             <p className="text-sm text-on-surface-variant mt-1 max-w-2xl">
-              Veja abaixo as transcrições das conversas e documentos que serão usados para criar as User Stories do seu projeto.
+              Veja abaixo as transcrições das conversas e os documentos. Clique em "Analisar fontes": o sistema resume o
+              entendimento do projeto para você revisar e, depois, criar as User Stories.
             </p>
           </div>
 
@@ -628,16 +643,44 @@ export const ProjetoScreen: React.FC<ProjetoScreenProps> = ({
                     {processingCount > 0 && `; ${processingCount} em processamento`}.
                   </span>
                 </div>
-                <button
-                  onClick={handleStartJob}
-                  disabled={!hasInput || processingCount > 0 || jobRunning || isStartingJob}
-                  title={hasStories && !hasInput ? 'Nenhuma fonte nova para analisar' : undefined}
-                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-primary hover:bg-primary-container text-white px-5 py-2 rounded-lg text-xs font-semibold transition-all shadow-xs disabled:opacity-50 cursor-pointer"
-                >
-                  <span>{hasStories ? 'Analisar Novas Fontes' : 'Criar Tarefas do Sistema'}</span>
-                  <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
-                </button>
+                <div className="w-full sm:w-auto flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                  {pendingReviewJob && (
+                    <button
+                      onClick={() => setIsReviewOpen(true)}
+                      disabled={jobRunning}
+                      title="Revisar a análise gerada e criar as tarefas do sistema"
+                      className="inline-flex items-center justify-center gap-2 bg-white hover:bg-surface-container border border-outline-variant/30 text-primary px-5 py-2 rounded-lg text-xs font-semibold transition-all shadow-xs disabled:opacity-50 cursor-pointer"
+                    >
+                      <span className="material-symbols-outlined text-[16px]">rate_review</span>
+                      <span>Revisar análise</span>
+                    </button>
+                  )}
+                  <button
+                    onClick={handleStartJob}
+                    disabled={!hasInput || processingCount > 0 || jobRunning || isStartingJob}
+                    title={hasStories && !hasInput ? 'Nenhuma fonte nova para analisar' : undefined}
+                    className="inline-flex items-center justify-center gap-2 bg-primary hover:bg-primary-container text-white px-5 py-2 rounded-lg text-xs font-semibold transition-all shadow-xs disabled:opacity-50 cursor-pointer"
+                  >
+                    <span>Analisar fontes</span>
+                    <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
+                  </button>
+                </div>
               </div>
+
+              {isReviewOpen && pendingReviewJob?.analysisId && (
+                <AnalysisReviewModal
+                  projectId={project.id}
+                  analysisId={pendingReviewJob.analysisId}
+                  audioIds={pendingReviewJob.audioIds.map(String)}
+                  documentIds={pendingReviewJob.documentIds.map(String)}
+                  hasStories={hasStories}
+                  onClose={() => setIsReviewOpen(false)}
+                  onStarted={() => {
+                    setIsReviewOpen(false);
+                    onNavigate('visao-geral');
+                  }}
+                />
+              )}
 
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
                 <div className="lg:col-span-6 bg-white rounded-xl p-5 shadow-xs border border-outline-variant/30 flex flex-col gap-4">

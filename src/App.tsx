@@ -145,10 +145,10 @@ export default function App() {
             <ProjectNav currentScreen={currentScreen} onNavigate={setCurrentScreen} />
             <ProjectHeader
               project={activeProject}
-              onUpdateProject={handleUpdateProject}
+              onNavigate={setCurrentScreen}
               onNavigateHome={() => setCurrentScreen('home')}
             />
-            <JobStatusBanner key={activeProject.id} projectId={activeProject.id} />
+            <JobStatusBanner key={activeProject.id} projectId={activeProject.id} onNavigate={setCurrentScreen} />
           </div>
         )}
 

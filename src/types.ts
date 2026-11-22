@@ -12,6 +12,8 @@ export interface Project {
   id: string;
   name: string;
   description: string;
+  /** "Sistema" da análise das fontes mais recente; vazio enquanto o projeto não tem análise. */
+  systemDescription: string;
   audiosCount: number;
   docsCount: number;
   filesSummary: string;
@@ -161,7 +163,28 @@ export interface Suggestion {
 
 export type JobStatus = SourceStatus;
 
-export type JobType = 'geracao_historias' | 'analise_atualizacao' | 'avaliacao_qualidade';
+export type JobType = 'geracao_historias' | 'analise_fontes' | 'analise_atualizacao' | 'avaliacao_qualidade';
+
+export type AnalysisItemType = 'usuario' | 'requisito_negocio' | 'funcionalidade' | 'fora_de_escopo' | 'participante';
+
+export interface AnalysisItem {
+  id: string;
+  type: AnalysisItemType;
+  code: string | null;
+  text: string;
+  complement: string;
+  references: string[];
+  hasEvidence: boolean;
+  sourceNames: string[];
+}
+
+export interface ProjectAnalysis {
+  id: string;
+  jobId: string | null;
+  system: string;
+  reviewed: boolean;
+  items: AnalysisItem[];
+}
 
 export interface Job {
   id: string;
@@ -176,6 +199,7 @@ export interface Job {
   documentIds: number[];
   createdCount: number;
   createdStoryIds: number[];
+  analysisId: string | null;
   resultMessage: string | null;
   failureCount: number;
 }

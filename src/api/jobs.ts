@@ -17,6 +17,7 @@ const toJob = (j: JobOut): Job => {
   const result = (j.resultado ?? {}) as {
     total?: number;
     historias_criadas?: number[];
+    analise_id?: number | null;
     mensagem?: string | null;
     lotes_com_erro?: unknown[];
     falhas?: unknown[];
@@ -34,6 +35,7 @@ const toJob = (j: JobOut): Job => {
     documentIds: params.documento_ids ?? [],
     createdCount: result.total ?? 0,
     createdStoryIds: result.historias_criadas ?? [],
+    analysisId: result.analise_id != null ? String(result.analise_id) : null,
     resultMessage: result.mensagem ?? null,
     failureCount: (result.lotes_com_erro ?? result.falhas ?? []).length,
   };
@@ -60,8 +62,22 @@ const sourcesBody = (audioIds: string[], documentIds: string[]) => ({
   documento_ids: documentIds.map(Number),
 });
 
-export const startGeneration = (qc: QueryClient, projectId: string, audioIds: string[], documentIds: string[]) =>
-  startJob(qc, projectId, `/projetos/${projectId}/historias/gerar`, sourcesBody(audioIds, documentIds));
+// Etapa anterior à geração: grava a análise das fontes (não revisada) para o analista revisar e aprovar.
+export const startSourceAnalysis = (qc: QueryClient, projectId: string, audioIds: string[], documentIds: string[]) =>
+  startJob(qc, projectId, `/projetos/${projectId}/analises/gerar`, sourcesBody(audioIds, documentIds));
+
+// Exige a análise aprovada que orienta a geração.
+export const startGeneration = (
+  qc: QueryClient,
+  projectId: string,
+  audioIds: string[],
+  documentIds: string[],
+  analysisId: string
+) =>
+  startJob(qc, projectId, `/projetos/${projectId}/historias/gerar`, {
+    ...sourcesBody(audioIds, documentIds),
+    analise_id: Number(analysisId),
+  });
 
 export const startAnalysis = (qc: QueryClient, projectId: string, audioIds: string[], documentIds: string[]) =>
   startJob(qc, projectId, `/projetos/${projectId}/atualizacoes/analisar`, sourcesBody(audioIds, documentIds));

@@ -1,40 +1,27 @@
 import React, { useState } from 'react';
-import { Project } from '../types.ts';
+import { useLatestAnalysis } from '../api/analyses.ts';
+import { useJobs } from '../api/jobs.ts';
+import { useStories } from '../api/stories.ts';
+import { Project, ScreenType } from '../types.ts';
+import { AnalysisReviewModal } from './AnalysisReviewModal.tsx';
 
 interface ProjectHeaderProps {
   project: Project;
-  onUpdateProject?: (project: Project) => void;
+  onNavigate: (screen: ScreenType) => void;
   onNavigateHome?: () => void;
 }
 
-export const ProjectHeader: React.FC<ProjectHeaderProps> = ({
-  project,
-  onUpdateProject,
-  onNavigateHome,
-}) => {
-  const [editModalOpen, setEditModalOpen] = useState(false);
-  const [name, setName] = useState(project.name);
-  const [description, setDescription] = useState(project.description);
+export const ProjectHeader: React.FC<ProjectHeaderProps> = ({ project, onNavigate, onNavigateHome }) => {
+  const [isAnalysisOpen, setIsAnalysisOpen] = useState(false);
+  const { data: analysis } = useLatestAnalysis(project.id);
+  const { data: jobs = [] } = useJobs(project.id);
+  const { data: stories = [] } = useStories(project.id);
 
-  // Synchronize when project changes
-  React.useEffect(() => {
-    setName(project.name);
-    setDescription(project.description);
-  }, [project]);
-
-  const handleSave = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!name.trim()) return;
-
-    if (onUpdateProject) {
-      onUpdateProject({
-        ...project,
-        name: name.trim(),
-        description: description.trim(),
-      });
-    }
-    setEditModalOpen(false);
-  };
+  // Análise da IA ainda não aprovada: o modal também oferece "Criar tarefas do Sistema".
+  const pendingJob =
+    analysis && !analysis.reviewed && analysis.jobId
+      ? jobs.find((j) => j.id === analysis.jobId && j.status === 'concluido')
+      : undefined;
 
   return (
     <section className="w-full bg-white border-b border-outline-variant/25 shadow-2xs">
@@ -64,7 +51,7 @@ export const ProjectHeader: React.FC<ProjectHeaderProps> = ({
               </div>
 
               <p className="text-xs sm:text-sm text-on-surface-variant leading-relaxed mt-1 line-clamp-2 max-w-4xl">
-                {project.description}
+                {project.systemDescription || 'Descrição do sistema disponível após a análise das fontes.'}
               </p>
 
               <div className="flex items-center gap-3 text-xs text-on-surface-variant pt-2 flex-wrap">
@@ -80,98 +67,48 @@ export const ProjectHeader: React.FC<ProjectHeaderProps> = ({
             </div>
           </div>
 
-          {/* Right: Edit Button */}
-          {onUpdateProject && (
-            <div className="flex items-center gap-2 shrink-0 self-start md:self-center">
-              <button
-                type="button"
-                onClick={() => {
-                  setName(project.name);
-                  setDescription(project.description);
-                  setEditModalOpen(true);
-                }}
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-surface hover:bg-surface-container border border-outline-variant/30 text-on-surface text-xs font-semibold transition-all shadow-2xs hover:shadow-xs cursor-pointer"
-                title="Editar título e descrição do projeto"
-              >
-                <span className="material-symbols-outlined text-[16px] text-primary">edit</span>
-                <span>Editar Projeto</span>
-              </button>
-            </div>
-          )}
+          {/* Right: Visualizar Análise */}
+          <div className="flex items-center gap-2 shrink-0 self-start md:self-center">
+            <button
+              type="button"
+              onClick={() => setIsAnalysisOpen(true)}
+              disabled={!analysis}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-surface hover:bg-surface-container border border-outline-variant/30 text-on-surface text-xs font-semibold transition-all shadow-2xs hover:shadow-xs disabled:opacity-50 cursor-pointer"
+              title={
+                analysis
+                  ? 'Ver e corrigir o entendimento do projeto gerado a partir das fontes'
+                  : 'Nenhuma análise ainda. Use "Analisar fontes" na aba de fontes.'
+              }
+            >
+              <span className="material-symbols-outlined text-[16px] text-primary">psychology</span>
+              <span>Visualizar Análise</span>
+              {pendingJob && (
+                <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary-fixed text-on-primary-fixed font-bold">
+                  a revisar
+                </span>
+              )}
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Modal de Edição de Título e Descrição */}
-      {editModalOpen && (
-        <div className="fixed inset-0 z-50 bg-[#213145]/40 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-lg rounded-2xl shadow-2xl p-6 flex flex-col gap-4 animate-in fade-in zoom-in-95 duration-200 border border-outline-variant/30">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-primary">
-                <span className="material-symbols-outlined text-[24px]">edit_note</span>
-                <h2 className="text-lg font-bold text-on-surface">Editar Projeto</h2>
-              </div>
-              <button
-                type="button"
-                onClick={() => setEditModalOpen(false)}
-                className="p-1 rounded-lg text-outline hover:text-on-surface hover:bg-surface-container transition-colors cursor-pointer"
-              >
-                <span className="material-symbols-outlined text-[20px]">close</span>
-              </button>
-            </div>
-
-            <p className="text-xs text-on-surface-variant leading-relaxed">
-              Atualize o título e a descrição do projeto. As alterações serão salvas imediatamente em todo o sistema.
-            </p>
-
-            <form onSubmit={handleSave} className="flex flex-col gap-4">
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-semibold text-on-surface" htmlFor="input-header-edit-nome">
-                  Título do Projeto
-                </label>
-                <input
-                  id="input-header-edit-nome"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Nome do projeto..."
-                  required
-                  autoFocus
-                  className="w-full px-3.5 py-2.5 bg-surface rounded-lg text-sm text-on-surface focus:outline-none focus:bg-white focus:ring-2 focus:ring-primary/30 border border-outline-variant/30 shadow-xs"
-                />
-              </div>
-
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-semibold text-on-surface" htmlFor="input-header-edit-desc">
-                  Descrição do Projeto
-                </label>
-                <textarea
-                  id="input-header-edit-desc"
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Descreva o objetivo do projeto..."
-                  rows={3}
-                  className="w-full px-3.5 py-2 bg-surface rounded-lg text-sm text-on-surface focus:outline-none focus:bg-white focus:ring-2 focus:ring-primary/30 border border-outline-variant/30 shadow-xs resize-none"
-                />
-              </div>
-
-              <div className="flex items-center justify-end gap-3 pt-2 border-t border-outline-variant/20">
-                <button
-                  type="button"
-                  onClick={() => setEditModalOpen(false)}
-                  className="px-4 py-2 rounded-lg bg-surface hover:bg-surface-container text-on-surface-variant text-xs font-semibold transition-colors cursor-pointer"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-lg bg-primary hover:bg-primary-container text-on-primary text-xs font-semibold transition-all shadow-xs cursor-pointer"
-                >
-                  <span className="material-symbols-outlined text-[16px]">check</span>
-                  <span>Salvar Alterações</span>
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+      {isAnalysisOpen && analysis && (
+        pendingJob ? (
+          <AnalysisReviewModal
+            projectId={project.id}
+            analysisId={analysis.id}
+            audioIds={pendingJob.audioIds.map(String)}
+            documentIds={pendingJob.documentIds.map(String)}
+            hasStories={stories.length > 0}
+            onClose={() => setIsAnalysisOpen(false)}
+            onStarted={() => {
+              setIsAnalysisOpen(false);
+              onNavigate('visao-geral');
+            }}
+          />
+        ) : (
+          <AnalysisReviewModal projectId={project.id} analysisId={analysis.id} onClose={() => setIsAnalysisOpen(false)} />
+        )
       )}
     </section>
   );

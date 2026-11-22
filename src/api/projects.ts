@@ -14,6 +14,7 @@ const toProject = (p: ProjectOut): Project => ({
   id: String(p.id),
   name: p.titulo,
   description: p.descricao ?? '',
+  systemDescription: p.descricao_sistema ?? '',
   audiosCount: p.total_audios,
   docsCount: p.total_documentos,
   filesSummary: formatFilesSummary(p.total_audios, p.total_documentos),

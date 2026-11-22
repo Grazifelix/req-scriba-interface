@@ -30,18 +30,16 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   const [isSaving, setIsSaving] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [newProjectName, setNewProjectName] = useState('');
-  const [newProjectDesc, setNewProjectDesc] = useState('');
   const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
 
   // Edit Project Modal state
   const [projectToEdit, setProjectToEdit] = useState<Project | null>(null);
   const [editProjectName, setEditProjectName] = useState('');
-  const [editProjectDesc, setEditProjectDesc] = useState('');
 
   const filteredProjects = projects.filter((p) => {
     return (
       p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      p.description.toLowerCase().includes(searchQuery.toLowerCase())
+      p.systemDescription.toLowerCase().includes(searchQuery.toLowerCase())
     );
   });
 
@@ -50,13 +48,13 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
     if (!newProjectName.trim() || isSaving) return;
 
     setIsSaving(true);
-    const created = await onCreateProject(newProjectName.trim(), newProjectDesc.trim());
+    // Projetos não têm mais descrição na interface; o entendimento do projeto fica na análise das fontes.
+    const created = await onCreateProject(newProjectName.trim(), '');
     setIsSaving(false);
     if (!created) return;
 
     setModalOpen(false);
     setNewProjectName('');
-    setNewProjectDesc('');
     showToast(`Projeto "${newProjectName}" criado com sucesso!`);
     // Navigate immediately to Ingestão de dados screen (Screen 5)
     onNavigate('projeto-ingestao');
@@ -65,7 +63,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   const handleOpenEdit = (proj: Project) => {
     setProjectToEdit(proj);
     setEditProjectName(proj.name);
-    setEditProjectDesc(proj.description);
   };
 
   const handleEditSubmit = async (e: React.FormEvent) => {
@@ -76,7 +73,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
     const updated = await onUpdateProject({
       ...projectToEdit,
       name: editProjectName.trim(),
-      description: editProjectDesc.trim(),
     });
     setIsSaving(false);
     if (updated) setProjectToEdit(null);
@@ -173,7 +169,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                 {proj.name}
               </h3>
               <p className="text-xs text-on-surface-variant line-clamp-2 leading-relaxed">
-                {proj.description}
+                {proj.systemDescription || 'Descrição do sistema disponível após a análise das fontes.'}
               </p>
 
               <div className="flex items-center gap-1.5 text-on-surface-variant text-xs pt-2">
@@ -252,20 +248,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                   required
                   autoFocus
                   className="w-full px-3.5 py-2.5 bg-surface rounded-lg text-sm text-on-surface focus:outline-none focus:bg-white focus:ring-2 focus:ring-primary/30 border border-outline-variant/30 shadow-xs"
-                />
-              </div>
-
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-semibold text-on-surface" htmlFor="input-desc-projeto">
-                  O que esse projeto vai resolver?
-                </label>
-                <textarea
-                  id="input-desc-projeto"
-                  value={newProjectDesc}
-                  onChange={(e) => setNewProjectDesc(e.target.value)}
-                  placeholder="Conte brevemente o objetivo das tarefas..."
-                  rows={3}
-                  className="w-full px-3.5 py-2 bg-surface rounded-lg text-sm text-on-surface focus:outline-none focus:bg-white focus:ring-2 focus:ring-primary/30 border border-outline-variant/30 shadow-xs resize-none"
                 />
               </div>
 
@@ -350,7 +332,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             </div>
 
             <p className="text-xs text-on-surface-variant leading-relaxed">
-              Atualize o título e a descrição do projeto. As alterações serão salvas imediatamente.
+              Atualize o título do projeto. A alteração será salva imediatamente.
             </p>
 
             <form onSubmit={handleEditSubmit} className="flex flex-col gap-4">
@@ -367,20 +349,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                   required
                   autoFocus
                   className="w-full px-3.5 py-2.5 bg-surface rounded-lg text-sm text-on-surface focus:outline-none focus:bg-white focus:ring-2 focus:ring-primary/30 border border-outline-variant/30 shadow-xs"
-                />
-              </div>
-
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-semibold text-on-surface" htmlFor="input-edit-desc-projeto">
-                  Descrição do Projeto
-                </label>
-                <textarea
-                  id="input-edit-desc-projeto"
-                  value={editProjectDesc}
-                  onChange={(e) => setEditProjectDesc(e.target.value)}
-                  placeholder="Descreva o objetivo do projeto..."
-                  rows={3}
-                  className="w-full px-3.5 py-2 bg-surface rounded-lg text-sm text-on-surface focus:outline-none focus:bg-white focus:ring-2 focus:ring-primary/30 border border-outline-variant/30 shadow-xs resize-none"
                 />
               </div>
 

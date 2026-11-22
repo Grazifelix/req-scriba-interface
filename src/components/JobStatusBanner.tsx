@@ -1,16 +1,23 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
+import { latestAnalysisKey } from '../api/analyses.ts';
 import { isJobActive, useJobs } from '../api/jobs.ts';
 import { PROJECTS_QUERY_KEY } from '../api/projects.ts';
-import { storiesKey } from '../api/stories.ts';
+import { storiesKey, useStories } from '../api/stories.ts';
 import { suggestionsKey } from '../api/suggestions.ts';
-import { Job } from '../types.ts';
+import { Job, ScreenType } from '../types.ts';
+import { AnalysisReviewModal } from './AnalysisReviewModal.tsx';
 import { QualityEvaluationPrompt } from './QualityEvaluationPrompt.tsx';
 
 const STALE_AFTER_MS = 30 * 60 * 1000;
 
 const finishedMessage = (job: Job): string => {
   if (job.status === 'erro') return `${job.typeLabel}: ${job.errorMessage ?? 'falhou.'}`;
+  if (job.type === 'analise_fontes') {
+    return job.analysisId
+      ? `${job.typeLabel} concluída. Revise o resultado para criar as tarefas do sistema.`
+      : `${job.typeLabel} concluída: ${job.resultMessage ?? 'nenhuma informação identificada.'}`;
+  }
   if (job.type === 'avaliacao_qualidade') {
     const failures = job.failureCount > 0 ? ` ${job.failureCount} história(s) não puderam ser avaliadas.` : '';
     return `${job.typeLabel} concluída: ${job.createdCount} história(s) avaliada(s).${failures}`;
@@ -20,12 +27,17 @@ const finishedMessage = (job: Job): string => {
   return `${job.typeLabel} concluída: ${job.resultMessage ?? `${job.createdCount} ${noun} criada(s).`}${failures}`;
 };
 
-export const JobStatusBanner: React.FC<{ projectId: string }> = ({ projectId }) => {
+export const JobStatusBanner: React.FC<{ projectId: string; onNavigate: (screen: ScreenType) => void }> = ({
+  projectId,
+  onNavigate,
+}) => {
   const queryClient = useQueryClient();
   const { data: jobs = [] } = useJobs(projectId);
+  const { data: stories = [] } = useStories(projectId);
   const followed = useRef(new Set<string>());
   const [finished, setFinished] = useState<Job | null>(null);
   const [storiesToEvaluate, setStoriesToEvaluate] = useState<number[]>([]);
+  const [analysisToReview, setAnalysisToReview] = useState<Job | null>(null);
   const active = jobs.find(isJobActive);
 
   // Só anuncia o fim dos jobs vistos em andamento, para não reexibir resultados antigos.
@@ -39,6 +51,10 @@ export const JobStatusBanner: React.FC<{ projectId: string }> = ({ projectId }) 
         queryClient.invalidateQueries({ queryKey: suggestionsKey(projectId) });
         queryClient.invalidateQueries({ queryKey: PROJECTS_QUERY_KEY });
         if (job.type === 'avaliacao_qualidade') queryClient.invalidateQueries({ queryKey: ['historia'] });
+        if (job.type === 'analise_fontes') {
+          queryClient.invalidateQueries({ queryKey: latestAnalysisKey(projectId) });
+          if (job.status === 'concluido' && job.analysisId) setAnalysisToReview(job);
+        }
         if (job.type === 'geracao_historias' && job.status === 'concluido' && job.createdStoryIds.length > 0) {
           setStoriesToEvaluate(job.createdStoryIds);
         }
@@ -50,10 +66,27 @@ export const JobStatusBanner: React.FC<{ projectId: string }> = ({ projectId }) 
     <QualityEvaluationPrompt projectId={projectId} storyIds={storiesToEvaluate} onClose={() => setStoriesToEvaluate([])} />
   );
 
+  const review = analysisToReview?.analysisId && (
+    <AnalysisReviewModal
+      projectId={projectId}
+      analysisId={analysisToReview.analysisId}
+      audioIds={analysisToReview.audioIds.map(String)}
+      documentIds={analysisToReview.documentIds.map(String)}
+      hasStories={stories.length > 0}
+      onClose={() => setAnalysisToReview(null)}
+      onStarted={() => {
+        setAnalysisToReview(null);
+        setFinished(null);
+        onNavigate('visao-geral');
+      }}
+    />
+  );
+
   return (
     <>
       <StatusLine active={active} finished={finished} onDismiss={() => setFinished(null)} />
       {prompt}
+      {review}
     </>
   );
 };

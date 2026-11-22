@@ -119,7 +119,10 @@ export interface paths {
         get: operations["get_audio_api_v1_audios__audio_id__get"];
         put?: never;
         post?: never;
-        /** Excluir áudio */
+        /**
+         * Excluir áudio
+         * @description Remove o áudio, a transcrição e os trechos indexados. Se a transcrição estiver em andamento, ela é interrompida no próximo segmento e o resultado é descartado.
+         */
         delete: operations["delete_audio_api_v1_audios__audio_id__delete"];
         options?: never;
         head?: never;
@@ -293,6 +296,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/projetos/{projeto_id}/analises/gerar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Analisar as fontes (etapa anterior à geração de histórias)
+         * @description Cria um job assíncrono que lê as fontes informadas e a análise mais recente do projeto e grava uma NOVA análise atualizada (não revisada), mantendo os itens, códigos RN/FN e edições da anterior. Use também quando entrarem novas fontes. A geração de histórias só usa análises aprovadas (`revisada: true`).
+         */
+        post: operations["generate_analysis_api_v1_projetos__projeto_id__analises_gerar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/projetos/{projeto_id}/analises": {
         parameters: {
             query?: never;
@@ -302,7 +325,7 @@ export interface paths {
         };
         /**
          * Listar análises do projeto
-         * @description Uma análise por geração de histórias (mais recente primeiro), com sistema, participantes, usuários, requisitos de negócio, funcionalidades e itens fora de escopo.
+         * @description Análises do projeto (mais recente primeiro), com sistema, participantes, usuários, requisitos de negócio, funcionalidades e itens fora de escopo.
          */
         get: operations["list_analyses_api_v1_projetos__projeto_id__analises_get"];
         put?: never;
@@ -334,7 +357,7 @@ export interface paths {
         head?: never;
         /**
          * Editar análise ou marcá-la como revisada
-         * @description Com `revisada: true`, a análise passa a orientar as próximas gerações do projeto (vale a revisada mais recente).
+         * @description Com `revisada: true` a análise fica aprovada e libera a geração de histórias (vale a aprovada mais recente, ou a informada em `analise_id`).
          */
         patch: operations["update_analysis_api_v1_analises__analise_id__patch"];
         trace?: never;
@@ -391,7 +414,7 @@ export interface paths {
         put?: never;
         /**
          * Gerar histórias a partir das fontes (US-05)
-         * @description Cria um job assíncrono. As histórias geradas ficam com status 'em_revisao' ou 'falta_informacao' e evidências vinculadas aos trechos de origem (US-16).
+         * @description Cria um job assíncrono. Exige uma análise das fontes aprovada pelo analista (`analise_id` ou a aprovada mais recente), que entra no prompt como ANALISE DO PROJETO. As histórias geradas ficam com status 'em_revisao' ou 'falta_informacao' e evidências vinculadas aos trechos de origem (US-16).
          */
         post: operations["generate_stories_api_v1_projetos__projeto_id__historias_gerar_post"];
         delete?: never;
@@ -1448,6 +1471,11 @@ export interface components {
             audio_ids?: number[];
             /** Documento Ids */
             documento_ids?: number[];
+            /**
+             * Analise Id
+             * @description Análise aprovada a usar; sem valor, usa a aprovada mais recente do projeto.
+             */
+            analise_id?: number | null;
         };
         /** JobList */
         JobList: {
@@ -1537,6 +1565,11 @@ export interface components {
             titulo: string;
             /** Descricao */
             descricao: string | null;
+            /**
+             * Descricao Sistema
+             * @description Campo 'sistema' da análise das fontes mais recente (None sem análise)
+             */
+            descricao_sistema?: string | null;
             /** Total Audios */
             total_audios: number;
             /** Total Documentos */
@@ -3296,6 +3329,70 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DocumentOut"];
+                };
+            };
+            /** @description Recurso não encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflito de estado */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Entrada inválida ou regra de negócio violada */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Falha em serviço externo (LLM, embeddings, ChromaDB, ASR) */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    generate_analysis_api_v1_projetos__projeto_id__analises_gerar_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-usuario"?: string | null;
+            };
+            path: {
+                projeto_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AnalysisRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobOut"];
                 };
             };
             /** @description Recurso não encontrado */
