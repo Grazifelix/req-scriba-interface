@@ -24,8 +24,8 @@ import { useStories } from '../api/stories.ts';
 import { AudioSource, DocumentSource, Project, ScreenType, SourceStatus, StagedFile, TranscriptSegment } from '../types.ts';
 
 const AUDIO_ACCEPT = '.mp3,.wav,.m4a,.ogg,.flac,.webm,.mp4';
-const DOCUMENT_ACCEPT = '.pdf,.docx,.txt,.md,.xlsx';
-const MAX_AUDIO_MB = 200;
+const DOCUMENT_ACCEPT = '.pdf,.docx,.txt,.md';
+const MAX_AUDIO_MB = 500;
 const MAX_DOCUMENT_MB = 20;
 
 const formatFileSize = (bytes: number): string =>
@@ -490,7 +490,7 @@ export const ProjetoScreen: React.FC<ProjetoScreenProps> = ({
                     </div>
                     <h3 className="text-base font-bold text-on-surface">Documentos</h3>
                     <p className="text-xs text-on-surface-variant mt-1 leading-relaxed">
-                      Manuais, regras de negócio e tabelas (<span className="font-mono text-on-surface font-medium">.pdf, .docx, .txt, .md, .xlsx</span>)
+                      Manuais e regras de negócio (<span className="font-mono text-on-surface font-medium">.pdf, .docx, .txt, .md</span>)
                     </p>
                     <div className="mt-3 inline-flex items-center gap-1 bg-surface-container-low px-2.5 py-1 rounded text-[11px] text-on-surface-variant font-medium">
                       <span className="material-symbols-outlined text-[14px] text-primary">psychology</span>

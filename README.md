@@ -40,9 +40,8 @@ Depois, abra `http://localhost:3000`.
 
 ## O que depende da API
 
-Dois recursos já estão na interface, mas a API ainda não os oferece. Até lá, a tela mostra a mensagem de erro:
+Um recurso já está na interface, mas a API ainda não o oferece. Até lá, a tela mostra a mensagem de erro:
 
-- **Planilhas (`.xlsx`):** o envio é recusado pela API, e o motivo aparece na fila de arquivos.
 - **Descartar pergunta:** a tela avisa que a função ainda não está disponível.
 
 ## Tipos da API
