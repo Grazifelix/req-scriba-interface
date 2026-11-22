@@ -5,11 +5,16 @@ import { PROJECTS_QUERY_KEY } from '../api/projects.ts';
 import { storiesKey } from '../api/stories.ts';
 import { suggestionsKey } from '../api/suggestions.ts';
 import { Job } from '../types.ts';
+import { QualityEvaluationPrompt } from './QualityEvaluationPrompt.tsx';
 
 const STALE_AFTER_MS = 30 * 60 * 1000;
 
 const finishedMessage = (job: Job): string => {
   if (job.status === 'erro') return `${job.typeLabel}: ${job.errorMessage ?? 'falhou.'}`;
+  if (job.type === 'avaliacao_qualidade') {
+    const failures = job.failureCount > 0 ? ` ${job.failureCount} história(s) não puderam ser avaliadas.` : '';
+    return `${job.typeLabel} concluída: ${job.createdCount} história(s) avaliada(s).${failures}`;
+  }
   const noun = job.isAnalysis ? 'sugestão(ões)' : 'história(s)';
   const failures = job.failureCount > 0 ? ` ${job.failureCount} etapa(s) falharam.` : '';
   return `${job.typeLabel} concluída: ${job.resultMessage ?? `${job.createdCount} ${noun} criada(s).`}${failures}`;
@@ -20,6 +25,7 @@ export const JobStatusBanner: React.FC<{ projectId: string }> = ({ projectId }) 
   const { data: jobs = [] } = useJobs(projectId);
   const followed = useRef(new Set<string>());
   const [finished, setFinished] = useState<Job | null>(null);
+  const [storiesToEvaluate, setStoriesToEvaluate] = useState<number[]>([]);
   const active = jobs.find(isJobActive);
 
   // Só anuncia o fim dos jobs vistos em andamento, para não reexibir resultados antigos.
@@ -32,10 +38,27 @@ export const JobStatusBanner: React.FC<{ projectId: string }> = ({ projectId }) 
         queryClient.invalidateQueries({ queryKey: storiesKey(projectId) });
         queryClient.invalidateQueries({ queryKey: suggestionsKey(projectId) });
         queryClient.invalidateQueries({ queryKey: PROJECTS_QUERY_KEY });
+        if (job.type === 'avaliacao_qualidade') queryClient.invalidateQueries({ queryKey: ['historia'] });
+        if (job.type === 'geracao_historias' && job.status === 'concluido' && job.createdStoryIds.length > 0) {
+          setStoriesToEvaluate(job.createdStoryIds);
+        }
       }
     }
   }, [jobs, projectId, queryClient]);
 
+  const prompt = storiesToEvaluate.length > 0 && (
+    <QualityEvaluationPrompt projectId={projectId} storyIds={storiesToEvaluate} onClose={() => setStoriesToEvaluate([])} />
+  );
+
+  return (
+    <>
+      <StatusLine active={active} finished={finished} onDismiss={() => setFinished(null)} />
+      {prompt}
+    </>
+  );
+};
+
+const StatusLine: React.FC<{ active?: Job; finished: Job | null; onDismiss: () => void }> = ({ active, finished, onDismiss }) => {
   if (active) {
     const stale = Date.now() - new Date(active.createdAt).getTime() > STALE_AFTER_MS;
     return (
@@ -59,7 +82,7 @@ export const JobStatusBanner: React.FC<{ projectId: string }> = ({ projectId }) 
       }`}
     >
       <span>{finishedMessage(finished)}</span>
-      <button type="button" onClick={() => setFinished(null)} title="Fechar aviso" className="p-0.5 rounded hover:bg-black/5 cursor-pointer">
+      <button type="button" onClick={onDismiss} title="Fechar aviso" className="p-0.5 rounded hover:bg-black/5 cursor-pointer">
         <span className="material-symbols-outlined text-[16px]">close</span>
       </button>
     </div>

@@ -570,6 +570,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/projetos/{projeto_id}/historias/avaliar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Avaliar várias histórias com QUS em lote (US-07)
+         * @description Cria um job assíncrono que avalia cada história informada (ou todas as ativas, se a lista vier vazia). A falha de uma história não interrompe as demais.
+         */
+        post: operations["evaluate_batch_api_v1_projetos__projeto_id__historias_avaliar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/historias/{historia_id}/avaliacoes": {
         parameters: {
             query?: never;
@@ -1145,6 +1165,14 @@ export interface components {
             pode_reprocessar: boolean;
         } & {
             [key: string]: unknown;
+        };
+        /** BatchEvaluationRequest */
+        BatchEvaluationRequest: {
+            /**
+             * Historia Ids
+             * @description Histórias a avaliar. Vazio: todas as histórias ativas do projeto.
+             */
+            historia_ids?: number[];
         };
         /** Body_upload_audio_api_v1_projetos__projeto_id__audios_post */
         Body_upload_audio_api_v1_projetos__projeto_id__audios_post: {
@@ -4469,6 +4497,70 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["EvaluationOut"];
+                };
+            };
+            /** @description Recurso não encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflito de estado */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Entrada inválida ou regra de negócio violada */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Falha em serviço externo (LLM, embeddings, ChromaDB, ASR) */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    evaluate_batch_api_v1_projetos__projeto_id__historias_avaliar_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-usuario"?: string | null;
+            };
+            path: {
+                projeto_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["BatchEvaluationRequest"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobOut"];
                 };
             };
             /** @description Recurso não encontrado */

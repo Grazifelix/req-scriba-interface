@@ -161,8 +161,11 @@ export interface Suggestion {
 
 export type JobStatus = SourceStatus;
 
+export type JobType = 'geracao_historias' | 'analise_atualizacao' | 'avaliacao_qualidade';
+
 export interface Job {
   id: string;
+  type: JobType;
   typeLabel: string;
   isAnalysis: boolean;
   status: JobStatus;
@@ -172,6 +175,7 @@ export interface Job {
   audioIds: number[];
   documentIds: number[];
   createdCount: number;
+  createdStoryIds: number[];
   resultMessage: string | null;
   failureCount: number;
 }

@@ -1,5 +1,5 @@
 import { QueryClient, useQuery } from '@tanstack/react-query';
-import { Job, JobStatus } from '../types.ts';
+import { Job, JobStatus, JobType } from '../types.ts';
 import { apiRequest } from './client.ts';
 import type { components } from './schema';
 
@@ -16,12 +16,14 @@ const toJob = (j: JobOut): Job => {
   const params = j.parametros as { audio_ids?: number[]; documento_ids?: number[] };
   const result = (j.resultado ?? {}) as {
     total?: number;
+    historias_criadas?: number[];
     mensagem?: string | null;
     lotes_com_erro?: unknown[];
     falhas?: unknown[];
   };
   return {
     id: j.id,
+    type: j.tipo as JobType,
     typeLabel: j.tipo_rotulo,
     isAnalysis: j.tipo === 'analise_atualizacao',
     status: j.status as JobStatus,
@@ -31,6 +33,7 @@ const toJob = (j: JobOut): Job => {
     audioIds: params.audio_ids ?? [],
     documentIds: params.documento_ids ?? [],
     createdCount: result.total ?? 0,
+    createdStoryIds: result.historias_criadas ?? [],
     resultMessage: result.mensagem ?? null,
     failureCount: (result.lotes_com_erro ?? result.falhas ?? []).length,
   };
@@ -46,23 +49,22 @@ export const useJobs = (projectId: string) =>
     refetchInterval: (query) => (query.state.data?.some(isJobActive) ? POLL_INTERVAL_MS : false),
   });
 
-const startJob = async (
-  queryClient: QueryClient,
-  projectId: string,
-  path: string,
-  audioIds: string[],
-  documentIds: string[]
-): Promise<void> => {
-  const job = await apiRequest<JobOut>(path, {
-    method: 'POST',
-    body: { audio_ids: audioIds.map(Number), documento_ids: documentIds.map(Number) },
-  });
+const startJob = async (queryClient: QueryClient, projectId: string, path: string, body: object): Promise<void> => {
+  const job = await apiRequest<JobOut>(path, { method: 'POST', body });
   // Entra no cache já ativo, para o acompanhamento não perder um job que termine depressa.
   queryClient.setQueryData<Job[]>(jobsKey(projectId), (jobs) => [toJob(job), ...(jobs ?? [])]);
 };
 
+const sourcesBody = (audioIds: string[], documentIds: string[]) => ({
+  audio_ids: audioIds.map(Number),
+  documento_ids: documentIds.map(Number),
+});
+
 export const startGeneration = (qc: QueryClient, projectId: string, audioIds: string[], documentIds: string[]) =>
-  startJob(qc, projectId, `/projetos/${projectId}/historias/gerar`, audioIds, documentIds);
+  startJob(qc, projectId, `/projetos/${projectId}/historias/gerar`, sourcesBody(audioIds, documentIds));
 
 export const startAnalysis = (qc: QueryClient, projectId: string, audioIds: string[], documentIds: string[]) =>
-  startJob(qc, projectId, `/projetos/${projectId}/atualizacoes/analisar`, audioIds, documentIds);
+  startJob(qc, projectId, `/projetos/${projectId}/atualizacoes/analisar`, sourcesBody(audioIds, documentIds));
+
+export const startQualityEvaluation = (qc: QueryClient, projectId: string, storyIds: number[]) =>
+  startJob(qc, projectId, `/projetos/${projectId}/historias/avaliar`, { historia_ids: storyIds });
