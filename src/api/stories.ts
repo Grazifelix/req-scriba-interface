@@ -173,6 +173,15 @@ export interface StoryChanges {
 export const updateStory = (storyId: string, changes: StoryChanges) =>
   apiRequest<unknown>(`/historias/${storyId}`, { method: 'PATCH', body: changes });
 
+// Aplica a reescrita da avaliação. Se ela dividir a história ("H1: …; H2: …"), a API cria as demais.
+export const applyRewrite = async (storyId: string, text: string): Promise<string[]> => {
+  const result = await apiRequest<{ historia: StoryOut; historias_criadas: StoryOut[] }>(
+    `/historias/${storyId}/aplicar-reescrita`,
+    { method: 'POST', body: { historia: text } }
+  );
+  return result.historias_criadas.map((s) => s.codigo);
+};
+
 // A API rejeita campos desconhecidos: critérios vão sem `id` (ela os renumera).
 export const criteriaPayload = (criteria: TestCriterion[]) =>
   criteria.map((c) => ({ titulo: c.title || undefined, criterio: c.criterion }));

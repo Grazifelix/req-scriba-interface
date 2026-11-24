@@ -1,6 +1,8 @@
 import React from 'react';
 import { StoryText } from './StoryText.tsx';
 
+const SPLIT_MARKER = /\bH\d+\s*:\s*/i;
+
 interface SuggestionPanelProps {
   currentLabel?: string;
   currentText: string;
@@ -25,6 +27,11 @@ export const SuggestionPanel: React.FC<SuggestionPanelProps> = ({
   onReject,
 }) => {
   const hasSuggestion = suggestionText !== null;
+  // Reescrita da avaliação que divide a história: "H1: Como …; H2: Como …".
+  const splitParts = (suggestionText ?? '')
+    .split(SPLIT_MARKER)
+    .map((part) => part.trim().replace(/;$/, '').trim())
+    .filter(Boolean);
 
   return (
     <section className="bg-white rounded-xl p-6 shadow-xs border border-surface-container flex flex-col gap-4">
@@ -108,8 +115,24 @@ export const SuggestionPanel: React.FC<SuggestionPanelProps> = ({
             Sugestão Otimizada (Recomendada)
           </span>
           <div className="text-xs text-on-surface leading-relaxed pt-1 bg-white p-3 rounded-lg border border-primary/20">
-            {hasSuggestion ? <StoryText text={suggestionText} /> : 'Nenhuma sugestão pendente para esta User Story.'}
+            {hasSuggestion ? (
+              splitParts.length > 1 ? (
+                <ol className="flex flex-col gap-1.5 list-decimal pl-4">
+                  {splitParts.map((part, i) => <li key={i}><StoryText text={part} /></li>)}
+                </ol>
+              ) : (
+                <StoryText text={suggestionText} />
+              )
+            ) : (
+              'Nenhuma sugestão pendente para esta User Story.'
+            )}
           </div>
+          {splitParts.length > 1 && (
+            <span className="text-xs text-tertiary flex items-start gap-1 pt-1 font-medium">
+              <span className="material-symbols-outlined text-[15px]">call_split</span>
+              <span>Ao aplicar, a 1ª substitui esta User Story e as outras {splitParts.length - 1} viram novas User Stories, cada uma com critérios de aceite próprios.</span>
+            </span>
+          )}
           {hasSuggestion && changedFields.length > 0 && (
             <span className="text-xs text-tertiary flex items-start gap-1 pt-1 font-medium">
               <span className="material-symbols-outlined text-[15px]">edit_note</span>

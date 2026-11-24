@@ -4,6 +4,7 @@ import { errorMessage } from '../api/client.ts';
 import { PROJECTS_QUERY_KEY } from '../api/projects.ts';
 import { generateQuestions, questionsKey } from '../api/questions.ts';
 import {
+  applyRewrite,
   approveStory,
   criteriaPayload,
   evaluateStory,
@@ -186,13 +187,17 @@ export const AvaliacaoQualidadeScreen: React.FC<AvaliacaoQualidadeScreenProps> =
   };
 
   // Aplicar: a sugestão vira a versão atual e os 13 critérios são reavaliados. Nunca aprova a história.
+  // Reescrita que divide a história: a primeira parte fica nesta User Story e as demais viram novas.
   const handleApplySuggestion = async () => {
-    const applied = await runChange(() =>
-      updateSuggestion ? approveSuggestion(updateSuggestion.id) : updateStory(storyId, { historia: rewrite ?? '' })
-    );
+    let createdCodes: string[] = [];
+    const applied = await runChange(async () => {
+      if (updateSuggestion) return approveSuggestion(updateSuggestion.id);
+      createdCodes = await applyRewrite(storyId, rewrite ?? '');
+    });
     if (!applied) return;
     setSuggestionIndex(0);
-    showToast('Sugestão aplicada. Reavaliando os 13 critérios...', 'sync');
+    const created = createdCodes.length ? ` Criadas: ${createdCodes.join(', ')}.` : '';
+    showToast(`Sugestão aplicada.${created} Reavaliando os 13 critérios...`, 'sync');
     evaluation.mutate(story.qualityScore);
   };
 
