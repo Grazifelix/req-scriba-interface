@@ -1,7 +1,9 @@
 import React from 'react';
 import { StoryText } from './StoryText.tsx';
 
-const SPLIT_MARKER = /\bH\d+\s*:\s*/i;
+// Início de outra história: "H2:" ou, após ";", "." ou quebra de linha, um novo "Como <perfil>, quero" (igual à API).
+const SPLIT_MARKER =
+  /\bH\d+\s*:\s*|(?:(?<=[;.])\s+|\s*\n\s*)(?=como\s[^,;.]+,\s*(?:eu\s+)?(?:quero|gostaria|preciso|desejo)\b)/i;
 
 interface SuggestionPanelProps {
   currentLabel?: string;
