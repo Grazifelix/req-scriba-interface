@@ -1,15 +1,19 @@
 import React, { useState } from 'react';
 import { useIsMutating, useMutation, useQueryClient } from '@tanstack/react-query';
 import { errorMessage } from '../api/client.ts';
+import { useEvaluatingStoryIds } from '../api/jobs.ts';
 import { PROJECTS_QUERY_KEY } from '../api/projects.ts';
 import { generateQuestions, questionsKey } from '../api/questions.ts';
 import {
   applyRewrite,
   approveStory,
   criteriaPayload,
+  dismissRewrite,
   evaluateStory,
   evaluationMutationKey,
   formatScore,
+  getDismissedRewrites,
+  pendingRewrite,
   rejectStory,
   storiesKey,
   storyKey,
@@ -27,27 +31,10 @@ import {
 import { SourceEvidenceList } from '../components/SourceEvidenceList.tsx';
 import { StoryText } from '../components/StoryText.tsx';
 import { SuggestionPanel } from '../components/SuggestionPanel.tsx';
+import { SuggestionIndicator } from '../components/SuggestionIndicator.tsx';
 import { HeuristicCategory, HeuristicItem, Project, ScreenType, TestCriterion } from '../types.ts';
 
 const TOTAL_CRITERIA = 13;
-const DISMISSED_REWRITES_KEY = 'reqscriba.reescritas_rejeitadas';
-
-// A API não tem como rejeitar a reescrita da avaliação; a decisão fica guardada neste navegador.
-const getDismissedRewrites = (): Record<string, string> => {
-  try {
-    return JSON.parse(localStorage.getItem(DISMISSED_REWRITES_KEY) ?? '{}');
-  } catch {
-    return {};
-  }
-};
-
-const dismissRewrite = (storyId: string, text: string): void => {
-  try {
-    localStorage.setItem(DISMISSED_REWRITES_KEY, JSON.stringify({ ...getDismissedRewrites(), [storyId]: text }));
-  } catch {
-    // Sem armazenamento local, a decisão vale apenas nesta sessão.
-  }
-};
 
 const HEURISTIC_COLUMNS: Array<{ category: HeuristicCategory; icon: string; color: string }> = [
   { category: '1. Estrutura do Texto', icon: 'spellcheck', color: 'text-primary' },
@@ -96,6 +83,7 @@ export const AvaliacaoQualidadeScreen: React.FC<AvaliacaoQualidadeScreenProps> =
   const { data: story, isPending, error } = useStory(storyId);
   const { data: stories = [] } = useStories(project.id);
   const { data: suggestions = [] } = usePendingSuggestions(project.id);
+  const evaluatingIds = useEvaluatingStoryIds(project.id);
 
   const [isEditing, setIsEditing] = useState(false);
   const [comoInput, setComoInput] = useState('');
@@ -150,10 +138,9 @@ export const AvaliacaoQualidadeScreen: React.FC<AvaliacaoQualidadeScreenProps> =
   }
 
   // Reescrita da avaliação: só aparece sem sugestão de atualização pendente e se ainda mudar o texto.
-  const rewrite =
-    !updateSuggestion && story.qualityRewrite && story.qualityRewrite !== story.summary && dismissedRewrites[storyId] !== story.qualityRewrite
-      ? story.qualityRewrite
-      : null;
+  const pendingStoryRewrite = pendingRewrite(story, dismissedRewrites);
+  const rewrite = updateSuggestion ? null : pendingStoryRewrite;
+  const recommendationCount = storySuggestions.length + (pendingStoryRewrite ? 1 : 0);
 
   const isBusy = isSaving || isAnalyzing;
 
@@ -281,6 +268,7 @@ export const AvaliacaoQualidadeScreen: React.FC<AvaliacaoQualidadeScreenProps> =
                   <option key={s.id} value={s.id}>{s.code} - {s.title}</option>
                 ))}
               </select>
+              <SuggestionIndicator count={recommendationCount} loading={evaluatingIds.has(storyId)} />
               <span data-testid="story-status" className={`px-2.5 py-0.5 rounded-full text-xs font-semibold flex items-center gap-1 ${
                 story.status === 'Aprovada' ? 'bg-tertiary-fixed text-on-tertiary-fixed-variant' : story.status === 'Desaprovada' ? 'bg-error-container text-on-error-container' : 'bg-primary-fixed text-on-primary-fixed'
               }`}>

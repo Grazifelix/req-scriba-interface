@@ -1,4 +1,4 @@
-import { QueryClient, useQuery } from '@tanstack/react-query';
+import { QueryClient, useMutationState, useQuery } from '@tanstack/react-query';
 import { Job, JobStatus, JobType } from '../types.ts';
 import { apiRequest } from './client.ts';
 import type { components } from './schema';
@@ -13,7 +13,7 @@ export const jobsKey = (projectId: string) => ['jobs', projectId];
 export const isJobActive = (job: Job): boolean => job.status === 'pendente' || job.status === 'processando';
 
 const toJob = (j: JobOut): Job => {
-  const params = j.parametros as { audio_ids?: number[]; documento_ids?: number[] };
+  const params = j.parametros as { audio_ids?: number[]; documento_ids?: number[]; historia_ids?: number[] };
   const result = (j.resultado ?? {}) as {
     total?: number;
     historias_criadas?: number[];
@@ -33,6 +33,7 @@ const toJob = (j: JobOut): Job => {
     createdAt: String(j.criado_em ?? ''),
     audioIds: params.audio_ids ?? [],
     documentIds: params.documento_ids ?? [],
+    storyIds: params.historia_ids ?? [],
     createdCount: result.total ?? 0,
     createdStoryIds: result.historias_criadas ?? [],
     analysisId: result.analise_id != null ? String(result.analise_id) : null,
@@ -50,6 +51,20 @@ export const useJobs = (projectId: string) =>
     },
     refetchInterval: (query) => (query.state.data?.some(isJobActive) ? POLL_INTERVAL_MS : false),
   });
+
+// US em avaliação de qualidade agora: avaliação individual em andamento (mutação ['avaliar', id])
+// ou incluída num job de avaliação em lote ainda ativo.
+export const useEvaluatingStoryIds = (projectId: string): Set<string> => {
+  const { data: jobs = [] } = useJobs(projectId);
+  const single = useMutationState({
+    filters: { mutationKey: ['avaliar'], status: 'pending' },
+    select: (mutation) => String(mutation.options.mutationKey?.[1] ?? ''),
+  });
+  const batch = jobs
+    .filter((job) => job.type === 'avaliacao_qualidade' && isJobActive(job))
+    .flatMap((job) => job.storyIds.map(String));
+  return new Set([...single, ...batch]);
+};
 
 const startJob = async (queryClient: QueryClient, projectId: string, path: string, body: object): Promise<void> => {
   const job = await apiRequest<JobOut>(path, { method: 'POST', body });

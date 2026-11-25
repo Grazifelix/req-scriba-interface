@@ -65,7 +65,40 @@ const toSummary = (s: StorySummaryOut): StorySummary => ({
   qualityScore: s.qualidade_geral?.porcentagem ?? null,
   qualityLabel: s.qualidade_geral?.status ?? 'Sem avaliação',
   hasMissingInfo: Boolean(s.possui_informacoes_ausentes),
+  qualityRewrite: s.reescrita_sugerida ?? null,
 });
+
+// A API não tem como rejeitar a reescrita da avaliação; a decisão fica guardada neste navegador.
+const DISMISSED_REWRITES_KEY = 'reqscriba.reescritas_rejeitadas';
+
+export const getDismissedRewrites = (): Record<string, string> => {
+  try {
+    return JSON.parse(localStorage.getItem(DISMISSED_REWRITES_KEY) ?? '{}');
+  } catch {
+    return {};
+  }
+};
+
+export const dismissRewrite = (storyId: string, text: string): void => {
+  try {
+    localStorage.setItem(DISMISSED_REWRITES_KEY, JSON.stringify({ ...getDismissedRewrites(), [storyId]: text }));
+  } catch {
+    // Sem armazenamento local, a decisão vale apenas nesta sessão.
+  }
+};
+
+// O LLM às vezes devolve um aviso ("Nenhuma reescrita sugerida.") ou uma instrução no lugar da reescrita:
+// só conta como sugestão o texto que traz ao menos uma história no padrão "Como …, quero …".
+const STORY_PATTERN = /\bcomo\s[^,;.]+,\s*(?:eu\s+)?(?:quero|gostaria|preciso|desejo)\b/i;
+const normalize = (text: string) => text.toLowerCase().replace(/\s+/g, ' ').replace(/[\s.;]+$/, '').trim();
+
+// Reescrita da avaliação ainda aguardando decisão: é uma história, muda o texto e não foi rejeitada neste navegador.
+export const pendingRewrite = (story: StorySummary, dismissed: Record<string, string>): string | null => {
+  const rewrite = story.qualityRewrite?.trim();
+  if (!rewrite || !STORY_PATTERN.test(rewrite)) return null;
+  if (normalize(rewrite) === normalize(story.summary)) return null;
+  return dismissed[story.id] === story.qualityRewrite ? null : story.qualityRewrite;
+};
 
 const toHeuristics = (block: StoryOut['criterios_qus']): HeuristicItem[] => {
   if (!block) return [];
@@ -140,7 +173,6 @@ const toStory = (s: StoryOut): UserStory => ({
   benefit: s.beneficio ?? '',
   criteria: s.criterios_aceitacao.map(toCriterion),
   qualityOutdated: Boolean(s.qualidade_geral?.desatualizada),
-  qualityRewrite: (s.criterios_qus?.reescrita_sugerida as string | null | undefined) ?? null,
   missingInfo: s.informacoes_ausentes.map((i) => String(i.descricao ?? i.elemento ?? '')).filter(Boolean),
   unsupportedClaims: s.afirmacoes_sem_evidencia,
   audioEvidence: s.fontes_audio.map(toAudioEvidence),

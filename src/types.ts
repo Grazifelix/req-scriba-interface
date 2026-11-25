@@ -74,6 +74,8 @@ export interface StorySummary {
   qualityScore: number | null;
   qualityLabel: string;
   hasMissingInfo: boolean;
+  /** Reescrita da avaliação de qualidade mais recente ("Sugestão Otimizada"). */
+  qualityRewrite: string | null;
 }
 
 export interface UserStory extends StorySummary {
@@ -82,7 +84,6 @@ export interface UserStory extends StorySummary {
   benefit: string;
   criteria: TestCriterion[];
   qualityOutdated: boolean;
-  qualityRewrite: string | null;
   missingInfo: string[];
   unsupportedClaims: string[];
   audioEvidence: AudioEvidence[];
@@ -197,6 +198,8 @@ export interface Job {
   createdAt: string;
   audioIds: number[];
   documentIds: number[];
+  /** Histórias do job de avaliação em lote. */
+  storyIds: number[];
   createdCount: number;
   createdStoryIds: number[];
   analysisId: string | null;

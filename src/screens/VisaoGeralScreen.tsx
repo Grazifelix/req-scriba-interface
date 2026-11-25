@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { errorMessage } from '../api/client.ts';
-import { formatScore, useStories } from '../api/stories.ts';
+import { useEvaluatingStoryIds } from '../api/jobs.ts';
+import { formatScore, getDismissedRewrites, pendingRewrite, useStories } from '../api/stories.ts';
 import { usePendingSuggestions } from '../api/suggestions.ts';
 import { StoryText } from '../components/StoryText.tsx';
-import { Project, ScreenType, StoryStatus } from '../types.ts';
+import { SuggestionIndicator } from '../components/SuggestionIndicator.tsx';
+import { Project, ScreenType, StoryStatus, StorySummary } from '../types.ts';
 
 interface VisaoGeralScreenProps {
   project: Project;
@@ -43,7 +45,16 @@ export const VisaoGeralScreen: React.FC<VisaoGeralScreenProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const { data: stories = [], isPending, error } = useStories(project.id);
   const { data: suggestions = [] } = usePendingSuggestions(project.id);
+  const evaluatingIds = useEvaluatingStoryIds(project.id);
   const newRequirements = suggestions.filter((s) => s.storyId === null);
+  const suggestionCountByStory = suggestions.reduce<Record<string, number>>((acc, s) => {
+    if (s.storyId !== null) acc[s.storyId] = (acc[s.storyId] ?? 0) + 1;
+    return acc;
+  }, {});
+  // Recomendações aguardando avaliação: sugestões de atualização pendentes + a "Sugestão Otimizada" da avaliação.
+  const dismissedRewrites = getDismissedRewrites();
+  const recommendationCount = (story: StorySummary) =>
+    (suggestionCountByStory[story.id] ?? 0) + (pendingRewrite(story, dismissedRewrites) ? 1 : 0);
 
   const countByStatus = (status: StoryStatus) => stories.filter((s) => s.status === status).length;
   const totalCount = stories.length;
@@ -205,10 +216,13 @@ export const VisaoGeralScreen: React.FC<VisaoGeralScreenProps> = ({
                 </div>
 
                 <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0">
-                  <span className={`px-2.5 py-1 rounded-full text-xs font-semibold flex items-center gap-1 border ${STATUS_BADGES[story.status].className}`}>
-                    <span className="material-symbols-outlined text-[14px]">{STATUS_BADGES[story.status].icon}</span>
-                    {story.status}
-                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <SuggestionIndicator count={recommendationCount(story)} loading={evaluatingIds.has(story.id)} />
+                    <span className={`px-2.5 py-1 rounded-full text-xs font-semibold flex items-center gap-1 border ${STATUS_BADGES[story.status].className}`}>
+                      <span className="material-symbols-outlined text-[14px]">{STATUS_BADGES[story.status].icon}</span>
+                      {story.status}
+                    </span>
+                  </div>
                   <button
                     onClick={() => onSelectStory(story.id)}
                     className="h-8 px-4 rounded-lg bg-surface-container hover:bg-primary hover:text-white text-on-surface text-xs font-semibold transition-all shadow-xs cursor-pointer flex items-center gap-1.5"

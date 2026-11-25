@@ -1848,6 +1848,11 @@ export interface components {
              */
             validada: boolean;
             qualidade_geral: components["schemas"]["QualitySummary"] | null;
+            /**
+             * Reescrita Sugerida
+             * @description Reescrita sugerida pela avaliação de qualidade mais recente, se houver
+             */
+            reescrita_sugerida?: string | null;
             /** Versao Atual */
             versao_atual: number;
             /** Origem */
@@ -1910,6 +1915,11 @@ export interface components {
              */
             validada: boolean;
             qualidade_geral: components["schemas"]["QualitySummary"] | null;
+            /**
+             * Reescrita Sugerida
+             * @description Reescrita sugerida pela avaliação de qualidade mais recente, se houver
+             */
+            reescrita_sugerida?: string | null;
             /** Versao Atual */
             versao_atual: number;
             /** Origem */
