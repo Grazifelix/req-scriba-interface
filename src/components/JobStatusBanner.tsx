@@ -22,6 +22,10 @@ const finishedMessage = (job: Job): string => {
     const failures = job.failureCount > 0 ? ` ${job.failureCount} história(s) não puderam ser avaliadas.` : '';
     return `${job.typeLabel} concluída: ${job.createdCount} história(s) avaliada(s).${failures}`;
   }
+  if (job.type === 'auditoria_evidencias') {
+    const failures = job.failureCount > 0 ? ` ${job.failureCount} história(s) não puderam ser auditadas.` : '';
+    return `${job.typeLabel} concluída: ${job.createdCount} história(s) auditada(s).${failures}`;
+  }
   if (job.type === 'geracao_criterios') {
     const failures = job.failureCount > 0 ? ` ${job.failureCount} história(s) falharam; gere os critérios delas de novo.` : '';
     return `${job.typeLabel} concluída: ${job.resultMessage ?? `${job.createdCount} história(s) atualizada(s).`}${failures}`;
@@ -55,7 +59,7 @@ export const JobStatusBanner: React.FC<{ projectId: string; onNavigate: (screen:
         queryClient.invalidateQueries({ queryKey: storiesKey(projectId) });
         queryClient.invalidateQueries({ queryKey: suggestionsKey(projectId) });
         queryClient.invalidateQueries({ queryKey: PROJECTS_QUERY_KEY });
-        if (job.type === 'avaliacao_qualidade' || job.type === 'geracao_criterios') {
+        if (job.type === 'avaliacao_qualidade' || job.type === 'geracao_criterios' || job.type === 'auditoria_evidencias') {
           queryClient.invalidateQueries({ queryKey: ['historia'] });
         }
         if (job.type === 'analise_fontes') {

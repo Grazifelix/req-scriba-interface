@@ -22,6 +22,7 @@ export const GENERATION_STAGES: Record<string, string> = {
   geracao_criterios: 'Geração dos critérios de aceitação',
   validacao_criterios: 'Validação dos critérios',
   persistencia: 'Gravação das User Stories',
+  auditoria_evidencias: 'Auditoria das evidências',
 };
 
 type StageOut = { etapa: string; status: JobStage['status']; duracao_s?: number; erro?: string | null };

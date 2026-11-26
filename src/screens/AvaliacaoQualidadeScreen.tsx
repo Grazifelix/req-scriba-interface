@@ -7,6 +7,7 @@ import { generateQuestions, questionsKey } from '../api/questions.ts';
 import {
   applyRewrite,
   approveStory,
+  auditEvidence,
   criteriaPayload,
   dismissRewrite,
   evaluateStory,
@@ -18,9 +19,11 @@ import {
   rejectStory,
   storiesKey,
   storyKey,
+  structuralValidationKey,
   updateStory,
   useStories,
   useStory,
+  useStructuralValidation,
 } from '../api/stories.ts';
 import {
   approveSuggestion,
@@ -29,11 +32,12 @@ import {
   usePendingSuggestions,
   useSuggestion,
 } from '../api/suggestions.ts';
+import { AuditBadge, AuditDetails, EvidenceAuditPanel } from '../components/EvidenceAuditPanel.tsx';
 import { SourceEvidenceList } from '../components/SourceEvidenceList.tsx';
 import { StoryText } from '../components/StoryText.tsx';
 import { SuggestionPanel } from '../components/SuggestionPanel.tsx';
 import { SuggestionIndicator } from '../components/SuggestionIndicator.tsx';
-import { HeuristicCategory, HeuristicItem, Project, ScreenType, TestCriterion } from '../types.ts';
+import { AuditItem, HeuristicCategory, HeuristicItem, Project, ScreenType, TestCriterion } from '../types.ts';
 
 const TOTAL_CRITERIA = 13;
 
@@ -72,12 +76,13 @@ const GHERKIN_PARTS = [
 ] as const;
 
 // Critério de aceitação: Dado/Quando/Então (quando gerado pela IA), trechos que o sustentam e sinalizações.
-const CriterionCard: React.FC<{ criterion: TestCriterion; index: number; busy: boolean; onDelete: () => void }> = ({
-  criterion,
-  index,
-  busy,
-  onDelete,
-}) => {
+const CriterionCard: React.FC<{
+  criterion: TestCriterion;
+  index: number;
+  busy: boolean;
+  audit?: AuditItem;
+  onDelete: () => void;
+}> = ({ criterion, index, busy, audit, onDelete }) => {
   const structured = Boolean(criterion.when || criterion.then);
   return (
     <div data-testid="criterion" className="bg-surface-container-low rounded-xl p-4 border border-surface-container flex items-start justify-between gap-4 group">
@@ -89,6 +94,7 @@ const CriterionCard: React.FC<{ criterion: TestCriterion; index: number; busy: b
             {criterion.aiGenerated && (
               <span className="px-1.5 py-0.5 rounded bg-primary-fixed text-primary text-[10px] font-semibold" title="Gerado pela IA a partir das evidências da User Story">IA</span>
             )}
+            {audit && <AuditBadge item={audit} />}
           </div>
           {structured ? (
             <dl className="grid grid-cols-[auto_1fr] gap-x-2 gap-y-0.5 text-xs leading-relaxed">
@@ -119,6 +125,7 @@ const CriterionCard: React.FC<{ criterion: TestCriterion; index: number; busy: b
               ))}
             </ul>
           )}
+          {audit && <AuditDetails item={audit} />}
           {criterion.warnings.length > 0 && (
             <ul data-testid="criterion-warnings" className="flex flex-col gap-0.5">
               {criterion.warnings.map((warning, i) => (
@@ -155,6 +162,7 @@ export const AvaliacaoQualidadeScreen: React.FC<AvaliacaoQualidadeScreenProps> =
 }) => {
   const queryClient = useQueryClient();
   const { data: story, isPending, error } = useStory(storyId);
+  const { data: structuralIssues = [] } = useStructuralValidation(storyId);
   const { data: stories = [] } = useStories(project.id);
   const { data: suggestions = [] } = usePendingSuggestions(project.id);
   const evaluatingIds = useEvaluatingStoryIds(project.id);
@@ -169,12 +177,14 @@ export const AvaliacaoQualidadeScreen: React.FC<AvaliacaoQualidadeScreenProps> =
   const [isSaving, setIsSaving] = useState(false);
   const [isGeneratingQuestions, setIsGeneratingQuestions] = useState(false);
   const [isGeneratingCriteria, setIsGeneratingCriteria] = useState(false);
+  const [isAuditing, setIsAuditing] = useState(false);
   const [suggestionIndex, setSuggestionIndex] = useState(0);
   const [dismissedRewrites, setDismissedRewrites] = useState(getDismissedRewrites);
 
   const refreshStory = () =>
     Promise.all([
       queryClient.invalidateQueries({ queryKey: storyKey(storyId) }),
+      queryClient.invalidateQueries({ queryKey: structuralValidationKey(storyId) }),
       queryClient.invalidateQueries({ queryKey: storiesKey(project.id) }),
       queryClient.invalidateQueries({ queryKey: suggestionsKey(project.id) }),
       queryClient.invalidateQueries({ queryKey: PROJECTS_QUERY_KEY }),
@@ -217,7 +227,7 @@ export const AvaliacaoQualidadeScreen: React.FC<AvaliacaoQualidadeScreenProps> =
   const rewrite = updateSuggestion ? null : pendingStoryRewrite;
   const recommendationCount = storySuggestions.length + (pendingStoryRewrite ? 1 : 0);
 
-  const isBusy = isSaving || isAnalyzing || isGeneratingCriteria;
+  const isBusy = isSaving || isAnalyzing || isGeneratingCriteria || isAuditing;
   const isApproved = story.status === 'Aprovada';
 
   const runChange = async (change: () => Promise<unknown>, successMessage?: string): Promise<boolean> => {
@@ -320,6 +330,21 @@ export const AvaliacaoQualidadeScreen: React.FC<AvaliacaoQualidadeScreenProps> =
       showToast(errorMessage(e), 'error');
     } finally {
       setIsGeneratingCriteria(false);
+    }
+  };
+
+  // Auditoria semântica: avalia se os trechos sustentam cada componente e cada critério; não altera nada.
+  const handleAudit = async () => {
+    setIsAuditing(true);
+    showToast('Auditando as evidências da User Story...', 'sync');
+    try {
+      await auditEvidence(storyId);
+      await refreshStory();
+      showToast('Auditoria concluída. Revise os itens sinalizados.', 'fact_check');
+    } catch (e) {
+      showToast(errorMessage(e), 'error');
+    } finally {
+      setIsAuditing(false);
     }
   };
 
@@ -550,11 +575,20 @@ export const AvaliacaoQualidadeScreen: React.FC<AvaliacaoQualidadeScreenProps> =
                 criterion={criterion}
                 index={idx}
                 busy={isBusy}
+                audit={criterion.criterionId != null ? story.evidenceAudit?.criteria[criterion.criterionId] : undefined}
                 onDelete={() => handleDeleteRule(criterion.id)}
               />
             ))}
           </div>
         </section>
+
+        <EvidenceAuditPanel
+          audit={story.evidenceAudit}
+          issues={structuralIssues}
+          busy={isBusy}
+          auditing={isAuditing}
+          onAudit={handleAudit}
+        />
 
         <SuggestionPanel
           currentText={story.summary}

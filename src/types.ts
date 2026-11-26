@@ -32,8 +32,44 @@ export interface CriterionSource {
   quote: string;
 }
 
+export type AuditResult = 'COMPATIVEL' | 'PARCIALMENTE_COMPATIVEL' | 'INCOMPATIVEL' | 'INSUFICIENTE' | 'SEM_EVIDENCIA';
+
+/** Resultado da auditoria semântica (VALIDACAO_EVIDENCIAS) para um componente da história ou um critério. */
+export interface AuditItem {
+  result: AuditResult;
+  problems: string[];
+  correction: string | null;
+  /** Partes do critério (Dado/Quando/Então) que os trechos não sustentam. */
+  unsupportedParts: string[];
+  /** false quando o resultado foi decidido pelo código (ex.: nenhum trecho vinculado). */
+  byModel: boolean;
+}
+
+export type StoryComponent = 'perfil' | 'funcionalidade' | 'beneficio';
+
+export interface EvidenceAudit {
+  id: string;
+  outdated: boolean;
+  date: string;
+  components: Partial<Record<StoryComponent, AuditItem>>;
+  criteria: Record<number, AuditItem>;
+  total: number;
+  compatible: number;
+  attention: number;
+}
+
+/** Problema da validação estrutural (feita por código, sem LLM). */
+export interface StructuralIssue {
+  type: string;
+  severity: 'erro' | 'aviso';
+  target: string;
+  message: string;
+}
+
 export interface TestCriterion {
   id: string;
+  /** Id permanente do critério (tabela criterios_aceitacao). */
+  criterionId?: number;
   title: string;
   criterion: string;
   /** Partes separadas; presentes nos critérios gerados pela IA (GERACAO_CRITERIOS_ACEITACAO). */
@@ -102,6 +138,7 @@ export interface UserStory extends StorySummary {
   criteria: TestCriterion[];
   /** Lacunas registradas pela etapa de critérios (o que falta nas fontes para escrevê-los). */
   criteriaGaps: string[];
+  evidenceAudit: EvidenceAudit | null;
   qualityOutdated: boolean;
   missingInfo: string[];
   unsupportedClaims: string[];
@@ -188,7 +225,8 @@ export type JobType =
   | 'analise_fontes'
   | 'analise_atualizacao'
   | 'avaliacao_qualidade'
-  | 'geracao_criterios';
+  | 'geracao_criterios'
+  | 'auditoria_evidencias';
 
 /** Etapa do pipeline de geração (resultado.etapas do job), atualizada enquanto o job roda. */
 export interface JobStage {

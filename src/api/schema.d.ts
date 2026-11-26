@@ -599,6 +599,157 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/historias/{historia_id}/validacao-estrutural": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Validação estrutural da rastreabilidade de uma história
+         * @description Verifica por código, sem LLM: referências a trechos inexistentes, ids duplicados, citações que divergem do trecho atual da fonte, campos obrigatórios, critérios sem evidência ou citando trechos que não são evidência da história, e vínculos das versões. Não julga se o trecho sustenta a afirmação (isso é a auditoria semântica).
+         */
+        get: operations["validate_story_traceability_api_v1_historias__historia_id__validacao_estrutural_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/projetos/{projeto_id}/validacao-estrutural": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Validação estrutural de todas as histórias ativas do projeto
+         * @description Totais por tipo de problema; `itens` traz só as histórias com algum problema.
+         */
+        get: operations["validate_project_traceability_api_v1_projetos__projeto_id__validacao_estrutural_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/historias/{historia_id}/auditoria-evidencias": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Auditar semanticamente as evidências de uma história
+         * @description Prompt VALIDACAO_EVIDENCIAS: cada componente (perfil, funcionalidade, benefício) e cada critério é avaliado só pelos trechos vinculados a ele (COMPATIVEL, PARCIALMENTE_COMPATIVEL, INCOMPATIVEL, INSUFICIENTE, SEM_EVIDENCIA). A história não é alterada; o resultado fica registrado para revisão humana. Falha do LLM → 502.
+         */
+        post: operations["audit_story_evidence_api_v1_historias__historia_id__auditoria_evidencias_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/historias/{historia_id}/auditorias-evidencias": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Histórico das auditorias de evidências de uma história (mais recente primeiro) */
+        get: operations["list_story_audits_api_v1_historias__historia_id__auditorias_evidencias_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auditorias-evidencias/{auditoria_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Detalhar uma auditoria */
+        get: operations["get_audit_api_v1_auditorias_evidencias__auditoria_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auditorias-evidencias/{auditoria_id}/revisoes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Revisão humana de um item da auditoria
+         * @description O analista confirma ou contesta o resultado do modelo para um componente ou critério. Uma nova revisão do mesmo item substitui a anterior. A história não muda.
+         */
+        post: operations["review_audit_api_v1_auditorias_evidencias__auditoria_id__revisoes_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/projetos/{projeto_id}/auditoria-evidencias": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Auditar as evidências de várias histórias (job auditoria_evidencias) */
+        post: operations["audit_project_evidence_api_v1_projetos__projeto_id__auditoria_evidencias_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/trechos/{trecho_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Fonte original de um trecho
+         * @description Arquivo, localização (página ou tempo, com link para o momento do áudio), texto atual e as histórias e critérios que usam o trecho como evidência.
+         */
+        get: operations["get_chunk_api_v1_trechos__trecho_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/historias/{historia_id}/versoes": {
         parameters: {
             query?: never;
@@ -1013,9 +1164,25 @@ export interface components {
         AcceptanceCriterionOut: {
             /**
              * Id
+             * @description Código pela posição na lista (muda se a ordem mudar)
              * @example CA01
              */
             id: string;
+            /**
+             * Criterio Id
+             * @description Id permanente do critério
+             */
+            criterio_id?: number | null;
+            /**
+             * Versao Historia
+             * @description Versão da história em que o critério entrou
+             */
+            versao_historia?: number | null;
+            /**
+             * Status
+             * @description vigente | substituido
+             */
+            status?: string | null;
             /** Titulo */
             titulo: string;
             /**
@@ -1365,6 +1532,11 @@ export interface components {
              */
             trecho_id: number;
             /**
+             * Evidencia Id
+             * @description Evidência da história que copia o trecho
+             */
+            evidencia_id?: number | null;
+            /**
              * Afirmacoes Sustentadas
              * @description Partes do critério sustentadas: dado | quando | entao
              */
@@ -1526,6 +1698,32 @@ export interface components {
         } & {
             [key: string]: unknown;
         };
+        /** EvidenceAuditRequest */
+        EvidenceAuditRequest: {
+            /**
+             * Historia Ids
+             * @description Histórias a auditar; vazio = todas as ativas do projeto.
+             */
+            historia_ids?: number[];
+        };
+        /** EvidenceAuditReview */
+        EvidenceAuditReview: {
+            /**
+             * Item
+             * @description 'componente:<perfil|funcionalidade|beneficio>' ou 'criterio:<criterio_id>'
+             * @example componente:funcionalidade
+             * @example criterio:12
+             */
+            item: string;
+            /**
+             * Decisao
+             * @description O analista confirma ou contesta o resultado do modelo
+             * @enum {string}
+             */
+            decisao: "confirma" | "contesta";
+            /** Observacao */
+            observacao?: string | null;
+        };
         /** EvidenceList */
         EvidenceList: {
             /** Historia Id */
@@ -1560,6 +1758,18 @@ export interface components {
              * @description extracao | atualizacao
              */
             origem: string;
+            /**
+             * Trecho Id
+             * @description Trecho da fonte original (GET /trechos/{trecho_id})
+             */
+            trecho_id?: number | null;
+            /** Afirmacao */
+            afirmacao?: string | null;
+            /**
+             * Afirmacoes Sustentadas
+             * @description Partes da história que o trecho sustenta: perfil | funcionalidade | beneficio
+             */
+            afirmacoes_sustentadas?: string[];
         } & {
             [key: string]: unknown;
         };
@@ -2025,6 +2235,13 @@ export interface components {
             atualizacoes_pendentes: number;
             /** Versoes */
             versoes: components["schemas"]["VersionOut"][];
+            /**
+             * Auditoria Evidencias
+             * @description Auditoria semântica mais recente das evidências (componentes, critérios, resumo)
+             */
+            auditoria_evidencias?: {
+                [key: string]: unknown;
+            } | null;
         } & {
             [key: string]: unknown;
         };
@@ -2247,6 +2464,11 @@ export interface components {
             };
             /** Evidencia Ids */
             evidencia_ids: number[];
+            /**
+             * Criterio Ids
+             * @description Critérios vigentes nesta versão
+             */
+            criterio_ids?: number[];
             /** Responsavel */
             responsavel: string;
             /** Data Hora */
@@ -4755,6 +4977,482 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TraceabilityOut"];
+                };
+            };
+            /** @description Recurso não encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflito de estado */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Entrada inválida ou regra de negócio violada */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Falha em serviço externo (LLM, embeddings, ChromaDB, ASR) */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    validate_story_traceability_api_v1_historias__historia_id__validacao_estrutural_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                historia_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Recurso não encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflito de estado */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Entrada inválida ou regra de negócio violada */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Falha em serviço externo (LLM, embeddings, ChromaDB, ASR) */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    validate_project_traceability_api_v1_projetos__projeto_id__validacao_estrutural_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                projeto_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Recurso não encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflito de estado */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Entrada inválida ou regra de negócio violada */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Falha em serviço externo (LLM, embeddings, ChromaDB, ASR) */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    audit_story_evidence_api_v1_historias__historia_id__auditoria_evidencias_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                historia_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Recurso não encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflito de estado */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Entrada inválida ou regra de negócio violada */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Falha em serviço externo (LLM, embeddings, ChromaDB, ASR) */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_story_audits_api_v1_historias__historia_id__auditorias_evidencias_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                historia_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Recurso não encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflito de estado */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Entrada inválida ou regra de negócio violada */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Falha em serviço externo (LLM, embeddings, ChromaDB, ASR) */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_audit_api_v1_auditorias_evidencias__auditoria_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                auditoria_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Recurso não encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflito de estado */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Entrada inválida ou regra de negócio violada */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Falha em serviço externo (LLM, embeddings, ChromaDB, ASR) */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    review_audit_api_v1_auditorias_evidencias__auditoria_id__revisoes_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-usuario"?: string | null;
+            };
+            path: {
+                auditoria_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EvidenceAuditReview"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Recurso não encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflito de estado */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Entrada inválida ou regra de negócio violada */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Falha em serviço externo (LLM, embeddings, ChromaDB, ASR) */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    audit_project_evidence_api_v1_projetos__projeto_id__auditoria_evidencias_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-usuario"?: string | null;
+            };
+            path: {
+                projeto_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["EvidenceAuditRequest"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobOut"];
+                };
+            };
+            /** @description Recurso não encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflito de estado */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Entrada inválida ou regra de negócio violada */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Falha em serviço externo (LLM, embeddings, ChromaDB, ASR) */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_chunk_api_v1_trechos__trecho_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                trecho_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
                 };
             };
             /** @description Recurso não encontrado */
