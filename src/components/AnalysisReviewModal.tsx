@@ -51,6 +51,18 @@ type Busy = null | 'item' | 'saving' | 'starting';
 const inputClass =
   'w-full px-2.5 py-1.5 text-xs bg-white border border-outline-variant/40 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary/40 text-on-surface disabled:bg-surface disabled:text-on-surface-variant';
 
+// Textarea que cresce com o conteúdo, para o texto inteiro ficar visível sem rolagem interna.
+const AutoGrowTextarea: React.FC<React.TextareaHTMLAttributes<HTMLTextAreaElement>> = (props) => {
+  const ref = useRef<HTMLTextAreaElement>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${el.scrollHeight + el.offsetHeight - el.clientHeight}px`;
+  }, [props.value]);
+  return <textarea ref={ref} {...props} />;
+};
+
 // Só um modal de análise aberto por vez: o que abre por último fecha os demais (ex.: o modal de revisão
 // que abre ao fim de um job, por cima de um "Visualizar Análise" que ficou aberto).
 const OPEN_EVENT = 'reqscriba:modal-analise-aberto';
@@ -275,14 +287,14 @@ export const AnalysisReviewModal: React.FC<Props> = ({
 
               <label className="flex flex-col gap-1.5">
                 <span className="text-xs font-bold text-on-surface">Sistema</span>
-                <textarea
+                <AutoGrowTextarea
                   value={systemDraft ?? analysis.system}
                   onChange={(e) => setSystemDraft(e.target.value)}
                   rows={3}
                   maxLength={2000}
                   disabled={readOnly}
                   placeholder="Qual sistema, produto ou solução está sendo discutido"
-                  className={`${inputClass} resize-none leading-relaxed`}
+                  className={`${inputClass} resize-none overflow-hidden leading-relaxed`}
                 />
               </label>
 
