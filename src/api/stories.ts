@@ -181,10 +181,12 @@ const toStory = (s: StoryOut): UserStory => ({
   versions: toVersions(s),
 });
 
-export const useStories = (projectId: string) =>
+// `pollMs`: recarrega a lista periodicamente (ex.: enquanto uma avaliação em lote preenche as notas).
+export const useStories = (projectId: string, pollMs: number | false = false) =>
   useQuery({
     queryKey: storiesKey(projectId),
     queryFn: async () => (await apiRequest<StoryList>(`/projetos/${projectId}/historias`)).itens.map(toSummary),
+    refetchInterval: pollMs,
   });
 
 export const useStory = (storyId: string | null) =>

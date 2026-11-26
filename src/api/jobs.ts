@@ -1,6 +1,7 @@
 import { QueryClient, useMutationState, useQuery } from '@tanstack/react-query';
 import { Job, JobStatus, JobType } from '../types.ts';
 import { apiRequest } from './client.ts';
+import { useStories } from './stories.ts';
 import type { components } from './schema';
 
 type JobOut = components['schemas']['JobOut'];
@@ -53,17 +54,21 @@ export const useJobs = (projectId: string) =>
   });
 
 // US em avaliação de qualidade agora: avaliação individual em andamento (mutação ['avaliar', id])
-// ou incluída num job de avaliação em lote ainda ativo.
+// ou incluída num job de avaliação em lote ainda ativo e ainda sem nota. O lote é oferecido para
+// histórias recém-geradas (sem nota): cada uma sai do carregamento assim que sua nota aparece,
+// sem esperar o fim do lote. Enquanto o lote roda, a lista de histórias é recarregada.
 export const useEvaluatingStoryIds = (projectId: string): Set<string> => {
   const { data: jobs = [] } = useJobs(projectId);
+  const batchIds = jobs
+    .filter((job) => job.type === 'avaliacao_qualidade' && isJobActive(job))
+    .flatMap((job) => job.storyIds.map(String));
+  const { data: stories = [] } = useStories(projectId, batchIds.length > 0 ? POLL_INTERVAL_MS : false);
+  const scored = new Set(stories.filter((s) => s.qualityScore !== null).map((s) => s.id));
   const single = useMutationState({
     filters: { mutationKey: ['avaliar'], status: 'pending' },
     select: (mutation) => String(mutation.options.mutationKey?.[1] ?? ''),
   });
-  const batch = jobs
-    .filter((job) => job.type === 'avaliacao_qualidade' && isJobActive(job))
-    .flatMap((job) => job.storyIds.map(String));
-  return new Set([...single, ...batch]);
+  return new Set([...single, ...batchIds.filter((id) => !scored.has(id))]);
 };
 
 const startJob = async (queryClient: QueryClient, projectId: string, path: string, body: object): Promise<void> => {
