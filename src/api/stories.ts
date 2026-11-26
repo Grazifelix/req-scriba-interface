@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import {
   AudioEvidence,
+  CriterionSource,
   DocumentEvidence,
   HeuristicCategory,
   HeuristicItem,
@@ -160,20 +161,53 @@ export const toDocumentEvidence = (e: SourceExcerpt, index = 0): DocumentEvidenc
   quote: e.trecho,
 });
 
-const toCriterion = (c: StoryOut['criterios_aceitacao'][number]): TestCriterion => ({
+type CriterionOut = StoryOut['criterios_aceitacao'][number];
+
+// Elemento das lacunas da etapa de critérios em `informacoes_ausentes` (mostradas no card de critérios).
+const CRITERIA_GAP = 'criterios_aceitacao';
+
+const PART_LABELS: Record<string, string> = { dado: 'Dado', quando: 'Quando', entao: 'Então' };
+
+// Trechos que sustentam a HU, por id do trecho da fonte: os critérios citam esses ids.
+const excerptsByChunk = (s: StoryOut): Map<number, Omit<CriterionSource, 'chunkId' | 'parts'>> => {
+  const map = new Map<number, Omit<CriterionSource, 'chunkId' | 'parts'>>();
+  for (const e of s.fontes_audio as SourceExcerpt[]) {
+    if (e.trecho_id != null) map.set(e.trecho_id, { fileName: e.nome_arquivo, location: String(e.inicio_formatado ?? ''), quote: e.trecho });
+  }
+  for (const e of s.fontes_documentos as SourceExcerpt[]) {
+    if (e.trecho_id != null) map.set(e.trecho_id, { fileName: e.nome_arquivo, location: e.pagina ? `Página ${e.pagina}` : 'Documento', quote: e.trecho });
+  }
+  return map;
+};
+
+const toCriterion = (c: CriterionOut, excerpts: ReturnType<typeof excerptsByChunk>): TestCriterion => ({
   id: c.id,
   title: c.titulo,
   criterion: c.criterio,
+  given: c.dado ?? undefined,
+  when: c.quando ?? undefined,
+  then: c.entao ?? undefined,
+  sources: (c.fontes ?? []).map((f) => ({
+    chunkId: f.trecho_id,
+    parts: f.afirmacoes_sustentadas.map((p) => PART_LABELS[p] ?? p),
+    ...(excerpts.get(f.trecho_id) ?? { fileName: 'Trecho da fonte', location: '', quote: '' }),
+  })),
+  warnings: c.afirmacoes_sem_evidencia ?? [],
+  aiGenerated: c.origem === 'ia',
 });
+
+const isCriteriaGap = (i: Record<string, unknown>) => i.elemento === CRITERIA_GAP;
+const gapText = (i: Record<string, unknown>) => String(i.descricao ?? i.elemento ?? '');
 
 const toStory = (s: StoryOut): UserStory => ({
   ...toSummary(s),
   actor: s.perfil ?? '',
   action: s.funcionalidade ?? '',
   benefit: s.beneficio ?? '',
-  criteria: s.criterios_aceitacao.map(toCriterion),
+  criteria: s.criterios_aceitacao.map((c) => toCriterion(c, excerptsByChunk(s))),
+  criteriaGaps: s.informacoes_ausentes.filter(isCriteriaGap).map(gapText).filter(Boolean),
   qualityOutdated: Boolean(s.qualidade_geral?.desatualizada),
-  missingInfo: s.informacoes_ausentes.map((i) => String(i.descricao ?? i.elemento ?? '')).filter(Boolean),
+  missingInfo: s.informacoes_ausentes.filter((i) => !isCriteriaGap(i)).map(gapText).filter(Boolean),
   unsupportedClaims: s.afirmacoes_sem_evidencia,
   audioEvidence: s.fontes_audio.map(toAudioEvidence),
   documentEvidence: s.fontes_documentos.map(toDocumentEvidence),
@@ -219,6 +253,11 @@ export const applyRewrite = async (storyId: string, text: string): Promise<strin
 // A API rejeita campos desconhecidos: critérios vão sem `id` (ela os renumera).
 export const criteriaPayload = (criteria: TestCriterion[]) =>
   criteria.map((c) => ({ titulo: c.title || undefined, criterio: c.criterion }));
+
+// Etapa GERACAO_CRITERIOS_ACEITACAO para uma HU gravada: substitui os critérios numa nova versão
+// (a anterior fica no histórico). A API recusa HU aprovada (409) e devolve 502 se o LLM falhar.
+export const generateCriteria = (storyId: string) =>
+  apiRequest<StoryOut>(`/historias/${storyId}/criterios/gerar`, { method: 'POST' });
 
 export const approveStory = (storyId: string) =>
   apiRequest<unknown>(`/historias/${storyId}/aprovar`, { method: 'POST' });

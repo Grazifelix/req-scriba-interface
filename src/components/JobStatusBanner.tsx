@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { latestAnalysisKey } from '../api/analyses.ts';
-import { isJobActive, useJobs } from '../api/jobs.ts';
+import { GENERATION_STAGES, isJobActive, useJobs } from '../api/jobs.ts';
 import { PROJECTS_QUERY_KEY } from '../api/projects.ts';
 import { storiesKey, useStories } from '../api/stories.ts';
 import { suggestionsKey } from '../api/suggestions.ts';
@@ -22,9 +22,14 @@ const finishedMessage = (job: Job): string => {
     const failures = job.failureCount > 0 ? ` ${job.failureCount} história(s) não puderam ser avaliadas.` : '';
     return `${job.typeLabel} concluída: ${job.createdCount} história(s) avaliada(s).${failures}`;
   }
+  if (job.type === 'geracao_criterios') {
+    const failures = job.failureCount > 0 ? ` ${job.failureCount} história(s) falharam; gere os critérios delas de novo.` : '';
+    return `${job.typeLabel} concluída: ${job.resultMessage ?? `${job.createdCount} história(s) atualizada(s).`}${failures}`;
+  }
   const noun = job.isAnalysis ? 'sugestão(ões)' : 'história(s)';
   const failures = job.failureCount > 0 ? ` ${job.failureCount} etapa(s) falharam.` : '';
-  return `${job.typeLabel} concluída: ${job.resultMessage ?? `${job.createdCount} ${noun} criada(s).`}${failures}`;
+  const criteria = job.criteriaFailureCount > 0 ? ' Os critérios de aceitação não foram gerados para parte das histórias; gere-os na revisão.' : '';
+  return `${job.typeLabel} concluída: ${job.resultMessage ?? `${job.createdCount} ${noun} criada(s).`}${failures}${criteria}`;
 };
 
 export const JobStatusBanner: React.FC<{ projectId: string; onNavigate: (screen: ScreenType) => void }> = ({
@@ -50,7 +55,9 @@ export const JobStatusBanner: React.FC<{ projectId: string; onNavigate: (screen:
         queryClient.invalidateQueries({ queryKey: storiesKey(projectId) });
         queryClient.invalidateQueries({ queryKey: suggestionsKey(projectId) });
         queryClient.invalidateQueries({ queryKey: PROJECTS_QUERY_KEY });
-        if (job.type === 'avaliacao_qualidade') queryClient.invalidateQueries({ queryKey: ['historia'] });
+        if (job.type === 'avaliacao_qualidade' || job.type === 'geracao_criterios') {
+          queryClient.invalidateQueries({ queryKey: ['historia'] });
+        }
         if (job.type === 'analise_fontes') {
           queryClient.invalidateQueries({ queryKey: latestAnalysisKey(projectId) });
           if (job.status === 'concluido' && job.analysisId) setAnalysisToReview(job);
@@ -91,14 +98,23 @@ export const JobStatusBanner: React.FC<{ projectId: string; onNavigate: (screen:
   );
 };
 
+// "Etapa 5 de 7: Geração dos critérios de aceitação" enquanto o job de geração roda.
+const currentStage = (job: Job): string | null => {
+  const stage = [...job.stages].reverse().find((s) => s.status === 'em_andamento');
+  if (!stage || job.type !== 'geracao_historias') return null;
+  const total = Object.keys(GENERATION_STAGES).length;
+  return `Etapa ${job.stages.length} de ${total}: ${stage.label}.`;
+};
+
 const StatusLine: React.FC<{ active?: Job; finished: Job | null; onDismiss: () => void }> = ({ active, finished, onDismiss }) => {
   if (active) {
+    const stage = currentStage(active);
     const stale = Date.now() - new Date(active.createdAt).getTime() > STALE_AFTER_MS;
     return (
       <div role="status" aria-live="polite" className="w-full bg-primary-fixed/30 border-b border-primary/20 px-4 py-2 text-xs font-medium text-on-surface flex items-center justify-center gap-2 text-center">
         <span className="inline-block w-3.5 h-3.5 border-2 border-primary border-t-transparent rounded-full animate-spin"></span>
         <span>
-          {active.typeLabel}: {active.statusLabel.toLowerCase()}. A IA local pode levar alguns minutos; você pode continuar navegando.
+          {active.typeLabel}: {active.statusLabel.toLowerCase()}.{stage && ` ${stage}`} A IA local pode levar alguns minutos; você pode continuar navegando.
           {stale && ' Este processo está demorando muito e pode ter sido interrompido se a API foi reiniciada.'}
         </span>
       </div>

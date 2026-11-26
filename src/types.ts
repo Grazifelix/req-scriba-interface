@@ -23,10 +23,27 @@ export interface Project {
 
 export type StoryStatus = 'Em revisão' | 'Falta Informação' | 'Aprovada' | 'Desaprovada';
 
+/** Trecho de fonte que sustenta um critério de aceitação, com as partes (Dado/Quando/Então) sustentadas. */
+export interface CriterionSource {
+  chunkId: number;
+  parts: string[];
+  fileName: string;
+  location: string;
+  quote: string;
+}
+
 export interface TestCriterion {
   id: string;
   title: string;
   criterion: string;
+  /** Partes separadas; presentes nos critérios gerados pela IA (GERACAO_CRITERIOS_ACEITACAO). */
+  given?: string;
+  when?: string;
+  then?: string;
+  sources: CriterionSource[];
+  /** Sinalizações da validação: sem evidência, citação não encontrada, referência inexistente. */
+  warnings: string[];
+  aiGenerated: boolean;
 }
 
 export type HeuristicCategory = '1. Estrutura do Texto' | '2. Sentido e Negócio' | '3. Prática e Execução';
@@ -83,6 +100,8 @@ export interface UserStory extends StorySummary {
   action: string;
   benefit: string;
   criteria: TestCriterion[];
+  /** Lacunas registradas pela etapa de critérios (o que falta nas fontes para escrevê-los). */
+  criteriaGaps: string[];
   qualityOutdated: boolean;
   missingInfo: string[];
   unsupportedClaims: string[];
@@ -164,7 +183,21 @@ export interface Suggestion {
 
 export type JobStatus = SourceStatus;
 
-export type JobType = 'geracao_historias' | 'analise_fontes' | 'analise_atualizacao' | 'avaliacao_qualidade';
+export type JobType =
+  | 'geracao_historias'
+  | 'analise_fontes'
+  | 'analise_atualizacao'
+  | 'avaliacao_qualidade'
+  | 'geracao_criterios';
+
+/** Etapa do pipeline de geração (resultado.etapas do job), atualizada enquanto o job roda. */
+export interface JobStage {
+  name: string;
+  label: string;
+  status: 'em_andamento' | 'concluida' | 'erro' | 'ignorada';
+  durationSec: number;
+  error: string | null;
+}
 
 export type AnalysisItemType = 'usuario' | 'requisito_negocio' | 'funcionalidade' | 'termo' | 'fora_de_escopo' | 'participante';
 
@@ -205,4 +238,7 @@ export interface Job {
   analysisId: string | null;
   resultMessage: string | null;
   failureCount: number;
+  stages: JobStage[];
+  /** Histórias gravadas sem critérios porque a etapa de critérios falhou para elas. */
+  criteriaFailureCount: number;
 }

@@ -12,6 +12,7 @@ import {
   evaluateStory,
   evaluationMutationKey,
   formatScore,
+  generateCriteria,
   getDismissedRewrites,
   pendingRewrite,
   rejectStory,
@@ -64,6 +65,79 @@ const HeuristicCard: React.FC<{ item: HeuristicItem }> = ({ item }) => {
   );
 };
 
+const GHERKIN_PARTS = [
+  ['Dado', 'given'],
+  ['Quando', 'when'],
+  ['Então', 'then'],
+] as const;
+
+// Critério de aceitação: Dado/Quando/Então (quando gerado pela IA), trechos que o sustentam e sinalizações.
+const CriterionCard: React.FC<{ criterion: TestCriterion; index: number; busy: boolean; onDelete: () => void }> = ({
+  criterion,
+  index,
+  busy,
+  onDelete,
+}) => {
+  const structured = Boolean(criterion.when || criterion.then);
+  return (
+    <div data-testid="criterion" className="bg-surface-container-low rounded-xl p-4 border border-surface-container flex items-start justify-between gap-4 group">
+      <div className="flex items-start gap-3 min-w-0">
+        <span className="w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs shrink-0 mt-0.5">{index + 1}</span>
+        <div className="flex flex-col gap-1.5 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-xs font-bold text-on-surface">{criterion.title}</span>
+            {criterion.aiGenerated && (
+              <span className="px-1.5 py-0.5 rounded bg-primary-fixed text-primary text-[10px] font-semibold" title="Gerado pela IA a partir das evidências da User Story">IA</span>
+            )}
+          </div>
+          {structured ? (
+            <dl className="grid grid-cols-[auto_1fr] gap-x-2 gap-y-0.5 text-xs leading-relaxed">
+              {GHERKIN_PARTS.map(([label, key]) =>
+                criterion[key] ? (
+                  <React.Fragment key={key}>
+                    <dt className="font-semibold text-primary">{label}</dt>
+                    <dd className="text-on-surface">{criterion[key]}</dd>
+                  </React.Fragment>
+                ) : null
+              )}
+            </dl>
+          ) : (
+            <p className="text-xs text-on-surface leading-relaxed whitespace-pre-line">{criterion.criterion}</p>
+          )}
+          {criterion.sources.length > 0 && (
+            <ul data-testid="criterion-sources" className="flex flex-col gap-1 mt-1">
+              {criterion.sources.map((source) => (
+                <li key={source.chunkId} className="text-[11px] text-on-surface-variant flex items-start gap-1">
+                  <span className="material-symbols-outlined text-[13px] text-primary mt-px">link</span>
+                  <span className="min-w-0">
+                    <span className="font-semibold text-on-surface">{source.fileName}</span>
+                    {source.location && <span> · {source.location}</span>}
+                    {source.parts.length > 0 && <span> · sustenta: {source.parts.join(', ')}</span>}
+                    {source.quote && <span className="block italic line-clamp-2" title={source.quote}>"{source.quote}"</span>}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+          {criterion.warnings.length > 0 && (
+            <ul data-testid="criterion-warnings" className="flex flex-col gap-0.5">
+              {criterion.warnings.map((warning, i) => (
+                <li key={i} className="text-[11px] text-[#92400e] flex items-start gap-1">
+                  <span className="material-symbols-outlined text-[13px] mt-px">warning</span>
+                  <span>{warning}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
+      <button onClick={onDelete} disabled={busy} title="Excluir regra" type="button" className="text-outline hover:text-error p-1 rounded transition-colors shrink-0 cursor-pointer">
+        <span className="material-symbols-outlined text-[18px]">delete_outline</span>
+      </button>
+    </div>
+  );
+};
+
 interface AvaliacaoQualidadeScreenProps {
   project: Project;
   storyId: string;
@@ -94,6 +168,7 @@ export const AvaliacaoQualidadeScreen: React.FC<AvaliacaoQualidadeScreenProps> =
   const [newRuleCriterion, setNewRuleCriterion] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [isGeneratingQuestions, setIsGeneratingQuestions] = useState(false);
+  const [isGeneratingCriteria, setIsGeneratingCriteria] = useState(false);
   const [suggestionIndex, setSuggestionIndex] = useState(0);
   const [dismissedRewrites, setDismissedRewrites] = useState(getDismissedRewrites);
 
@@ -142,7 +217,8 @@ export const AvaliacaoQualidadeScreen: React.FC<AvaliacaoQualidadeScreenProps> =
   const rewrite = updateSuggestion ? null : pendingStoryRewrite;
   const recommendationCount = storySuggestions.length + (pendingStoryRewrite ? 1 : 0);
 
-  const isBusy = isSaving || isAnalyzing;
+  const isBusy = isSaving || isAnalyzing || isGeneratingCriteria;
+  const isApproved = story.status === 'Aprovada';
 
   const runChange = async (change: () => Promise<unknown>, successMessage?: string): Promise<boolean> => {
     setIsSaving(true);
@@ -202,7 +278,14 @@ export const AvaliacaoQualidadeScreen: React.FC<AvaliacaoQualidadeScreenProps> =
   const handleAddRule = async (e: React.SyntheticEvent) => {
     e.preventDefault();
     if (!newRuleCriterion.trim()) return;
-    const newRule: TestCriterion = { id: '', title: newRuleTitle.trim(), criterion: newRuleCriterion.trim() };
+    const newRule: TestCriterion = {
+      id: '',
+      title: newRuleTitle.trim(),
+      criterion: newRuleCriterion.trim(),
+      sources: [],
+      warnings: [],
+      aiGenerated: false,
+    };
     const saved = await runChange(
       () => updateStory(storyId, { criterios_aceitacao: criteriaPayload([...story.criteria, newRule]) }),
       'Novo critério de aceite adicionado!'
@@ -219,6 +302,26 @@ export const AvaliacaoQualidadeScreen: React.FC<AvaliacaoQualidadeScreenProps> =
       () => updateStory(storyId, { criterios_aceitacao: criteriaPayload(story.criteria.filter((c) => c.id !== id)) }),
       'Critério removido.'
     );
+
+  // Critérios gerados pela IA a partir das evidências; os atuais ficam na versão anterior da User Story.
+  const handleGenerateCriteria = async () => {
+    if (story.criteria.length > 0 && !window.confirm('Os critérios atuais serão substituídos pelos gerados pela IA. A versão anterior fica no histórico. Continuar?')) return;
+    setIsGeneratingCriteria(true);
+    showToast('Gerando critérios de aceitação a partir das evidências...', 'sync');
+    try {
+      const result = await generateCriteria(storyId);
+      await refreshStory();
+      const total = result.criterios_aceitacao.length;
+      showToast(
+        total > 0 ? `${total} critério(s) de aceitação gerado(s).` : 'As fontes não trazem base para critérios; veja as lacunas registradas.',
+        total > 0 ? 'auto_awesome' : 'info'
+      );
+    } catch (e) {
+      showToast(errorMessage(e), 'error');
+    } finally {
+      setIsGeneratingCriteria(false);
+    }
+  };
 
   const handleGenerateQuestions = async () => {
     setIsGeneratingQuestions(true);
@@ -409,27 +512,46 @@ export const AvaliacaoQualidadeScreen: React.FC<AvaliacaoQualidadeScreenProps> =
                 <p className="text-xs text-on-surface-variant">Critérios objetivos para verificar a entrega</p>
               </div>
             </div>
-            <button onClick={() => setNewRuleModalOpen(true)} disabled={isBusy} type="button" className="px-3.5 py-1.5 rounded-lg bg-surface-container-low hover:bg-surface-container text-primary text-xs font-semibold flex items-center gap-1 border border-surface-container transition-colors shadow-xs disabled:opacity-50 cursor-pointer">
-              <span className="material-symbols-outlined text-[18px]">add</span>
-              <span>Adicionar Regra</span>
-            </button>
+            <div className="flex items-center gap-2 flex-wrap">
+              <button
+                onClick={handleGenerateCriteria}
+                disabled={isBusy || isApproved}
+                type="button"
+                title={isApproved ? 'User Stories aprovadas não recebem critérios da IA. Edite-os manualmente.' : 'Gera critérios a partir das evidências desta User Story'}
+                className="px-3.5 py-1.5 rounded-lg bg-surface-container-low hover:bg-surface-container text-secondary text-xs font-semibold flex items-center gap-1 border border-surface-container transition-colors shadow-xs disabled:opacity-50 cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-[18px]">auto_awesome</span>
+                <span>{isGeneratingCriteria ? 'Gerando...' : story.criteria.length > 0 ? 'Regerar critérios' : 'Gerar critérios'}</span>
+              </button>
+              <button onClick={() => setNewRuleModalOpen(true)} disabled={isBusy} type="button" className="px-3.5 py-1.5 rounded-lg bg-surface-container-low hover:bg-surface-container text-primary text-xs font-semibold flex items-center gap-1 border border-surface-container transition-colors shadow-xs disabled:opacity-50 cursor-pointer">
+                <span className="material-symbols-outlined text-[18px]">add</span>
+                <span>Adicionar Regra</span>
+              </button>
+            </div>
           </div>
+
+          {story.criteriaGaps.length > 0 && (
+            <div data-testid="criteria-gaps" className="p-3 bg-[#fffbeb] border border-[#fcd34d] rounded-lg flex items-start gap-2">
+              <span className="material-symbols-outlined text-[18px] text-[#d97706]">info</span>
+              <div className="flex flex-col gap-0.5">
+                <span className="text-xs font-bold text-[#78350f]">O que falta nas fontes para os critérios</span>
+                <ul className="text-xs text-[#92400e] leading-relaxed list-disc pl-4">
+                  {story.criteriaGaps.map((gap, i) => <li key={i}>{gap}</li>)}
+                </ul>
+              </div>
+            </div>
+          )}
 
           <div className="flex flex-col gap-3">
             {story.criteria.length === 0 && <p className="text-xs text-on-surface-variant text-center py-3">Nenhum critério definido.</p>}
             {story.criteria.map((criterion, idx) => (
-              <div key={criterion.id} data-testid="criterion" className="bg-surface-container-low rounded-xl p-4 border border-surface-container flex items-center justify-between gap-4 group">
-                <div className="flex items-start gap-3">
-                  <span className="w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs shrink-0 mt-0.5">{idx + 1}</span>
-                  <div className="flex flex-col gap-0.5">
-                    <span className="text-xs font-bold text-on-surface">{criterion.title}</span>
-                    <p className="text-xs text-on-surface leading-relaxed mt-0.5 whitespace-pre-line">{criterion.criterion}</p>
-                  </div>
-                </div>
-                <button onClick={() => handleDeleteRule(criterion.id)} disabled={isBusy} title="Excluir regra" type="button" className="text-outline hover:text-error p-1 rounded transition-colors shrink-0 cursor-pointer">
-                  <span className="material-symbols-outlined text-[18px]">delete_outline</span>
-                </button>
-              </div>
+              <CriterionCard
+                key={criterion.id}
+                criterion={criterion}
+                index={idx}
+                busy={isBusy}
+                onDelete={() => handleDeleteRule(criterion.id)}
+              />
             ))}
           </div>
         </section>

@@ -1,5 +1,5 @@
 import { QueryClient, useMutationState, useQuery } from '@tanstack/react-query';
-import { Job, JobStatus, JobType } from '../types.ts';
+import { Job, JobStage, JobStatus, JobType } from '../types.ts';
 import { apiRequest } from './client.ts';
 import { useStories } from './stories.ts';
 import type { components } from './schema';
@@ -13,6 +13,27 @@ export const jobsKey = (projectId: string) => ['jobs', projectId];
 
 export const isJobActive = (job: Job): boolean => job.status === 'pendente' || job.status === 'processando';
 
+// Etapas do job de geração (backend: services/generation.py), na ordem em que rodam.
+export const GENERATION_STAGES: Record<string, string> = {
+  preparacao: 'Preparação das fontes',
+  geracao_us: 'Geração das User Stories',
+  consolidacao_us: 'Consolidação das User Stories',
+  validacao_us: 'Validação das User Stories',
+  geracao_criterios: 'Geração dos critérios de aceitação',
+  validacao_criterios: 'Validação dos critérios',
+  persistencia: 'Gravação das User Stories',
+};
+
+type StageOut = { etapa: string; status: JobStage['status']; duracao_s?: number; erro?: string | null };
+
+const toStage = (s: StageOut): JobStage => ({
+  name: s.etapa,
+  label: GENERATION_STAGES[s.etapa] ?? s.etapa,
+  status: s.status,
+  durationSec: s.duracao_s ?? 0,
+  error: s.erro ?? null,
+});
+
 const toJob = (j: JobOut): Job => {
   const params = j.parametros as { audio_ids?: number[]; documento_ids?: number[]; historia_ids?: number[] };
   const result = (j.resultado ?? {}) as {
@@ -22,6 +43,8 @@ const toJob = (j: JobOut): Job => {
     mensagem?: string | null;
     lotes_com_erro?: unknown[];
     falhas?: unknown[];
+    etapas?: StageOut[];
+    criterios?: { falhas?: unknown[] };
   };
   return {
     id: j.id,
@@ -40,6 +63,8 @@ const toJob = (j: JobOut): Job => {
     analysisId: result.analise_id != null ? String(result.analise_id) : null,
     resultMessage: result.mensagem ?? null,
     failureCount: (result.lotes_com_erro ?? result.falhas ?? []).length,
+    stages: (result.etapas ?? []).map(toStage),
+    criteriaFailureCount: (result.criterios?.falhas ?? []).length,
   };
 };
 
