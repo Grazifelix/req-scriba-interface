@@ -1001,10 +1001,10 @@ export interface components {
         AnalysisItemCreate: {
             /**
              * Tipo
-             * @description participante | usuario | requisito_negocio | funcionalidade | fora_de_escopo
+             * @description participante | usuario | requisito_negocio | funcionalidade | termo | fora_de_escopo
              * @enum {string}
              */
-            tipo: "participante" | "usuario" | "requisito_negocio" | "funcionalidade" | "fora_de_escopo";
+            tipo: "participante" | "usuario" | "requisito_negocio" | "funcionalidade" | "termo" | "fora_de_escopo";
             /**
              * Texto
              * @description Nome, papel ou descrição, conforme o tipo

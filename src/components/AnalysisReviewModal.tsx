@@ -40,6 +40,7 @@ const SECTIONS: Section[] = [
   { type: 'usuario', title: 'Usuários do sistema', hint: 'Papéis que vão usar o sistema. Viram o perfil das User Stories.', complementLabel: 'Descrição', placeholder: 'Ex.: coordenador pedagógico' },
   { type: 'requisito_negocio', title: 'Requisitos de negócio', hint: 'Metas e problemas que a solução resolve. Viram o benefício das User Stories.', complementLabel: null, placeholder: 'Ex.: reduzir o tempo de espera do cliente' },
   { type: 'funcionalidade', title: 'Funcionalidades', hint: 'O que o sistema deve permitir fazer. Cada uma vira uma ou mais User Stories.', complementLabel: 'Usuário', placeholder: 'Ex.: emitir o boletim da turma' },
+  { type: 'termo', title: 'Termos do domínio', hint: 'Termos usados pelo cliente e o que significam. Orientam a escrita das User Stories.', complementLabel: 'Significado', placeholder: 'Ex.: ficha' },
   { type: 'fora_de_escopo', title: 'Fora de escopo', hint: 'Itens citados nas fontes que não viram User Stories.', complementLabel: 'Motivo', placeholder: 'Ex.: aprovar o cronograma do projeto' },
   { type: 'participante', title: 'Participantes da reunião', hint: 'Quem falou nas reuniões. Não são perfis de User Story.', complementLabel: 'Papel na reunião', placeholder: 'Ex.: Ana' },
 ];

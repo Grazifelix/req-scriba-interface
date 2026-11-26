@@ -166,7 +166,7 @@ export type JobStatus = SourceStatus;
 
 export type JobType = 'geracao_historias' | 'analise_fontes' | 'analise_atualizacao' | 'avaliacao_qualidade';
 
-export type AnalysisItemType = 'usuario' | 'requisito_negocio' | 'funcionalidade' | 'fora_de_escopo' | 'participante';
+export type AnalysisItemType = 'usuario' | 'requisito_negocio' | 'funcionalidade' | 'termo' | 'fora_de_escopo' | 'participante';
 
 export interface AnalysisItem {
   id: string;
