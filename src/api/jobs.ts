@@ -45,6 +45,7 @@ const toJob = (j: JobOut): Job => {
     lotes_com_erro?: unknown[];
     falhas?: unknown[];
     etapas?: StageOut[];
+    por_categoria?: Record<string, number>;
     criterios?: { falhas?: unknown[] };
   };
   return {
@@ -65,6 +66,7 @@ const toJob = (j: JobOut): Job => {
     resultMessage: result.mensagem ?? null,
     failureCount: (result.lotes_com_erro ?? result.falhas ?? []).length,
     stages: (result.etapas ?? []).map(toStage),
+    categoryCounts: result.por_categoria ?? {},
     criteriaFailureCount: (result.criterios?.falhas ?? []).length,
   };
 };

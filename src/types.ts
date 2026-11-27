@@ -94,7 +94,12 @@ export interface HeuristicItem {
 }
 
 export interface StoryVersion {
+  number: number;
   version: string;
+  /** Status da User Story quando a versão foi criada (vazio em versões antigas). */
+  statusLabel: string | null;
+  /** Arquivos das fontes que motivaram a versão (evidências vinculadas desde a anterior). */
+  sources: string[];
   type: string;
   isAi: boolean;
   author: string;
@@ -202,8 +207,43 @@ export interface StagedFile {
   errorMessage?: string;
 }
 
+export interface ImpactConflictSource {
+  label: string;
+  /** "fonte_nova" (trecho da fonte nova) ou "evidencia_atual" (evidência que já sustentava a história). */
+  origin: string;
+  description: string;
+  text: string;
+}
+
+export interface ImpactConflict {
+  description: string;
+  impact: string | null;
+  sources: ImpactConflictSource[];
+}
+
+export interface AffectedCriterion {
+  code: string;
+  criterion: string;
+  action: 'REVISAR' | 'MANTER';
+  /** false quando foi o sistema que marcou (numa modificação, todo critério não mantido pela IA é revisado). */
+  byModel: boolean;
+}
+
 export interface Suggestion {
   id: string;
+  /** Categoria de impacto (Milestone 3): confirmacao, complementacao, modificacao, contradicao, nova_necessidade. */
+  isConfirmation: boolean;
+  /** A User Story mudou depois desta proposta; aprovar exige confirmação. */
+  outdated: boolean;
+  baseVersion: number | null;
+  currentVersion: number | null;
+  reclassifiedFrom: string | null;
+  affectedComponents: string[];
+  affectedCriteria: AffectedCriterion[];
+  conflicts: ImpactConflict[];
+  alternativeText: string | null;
+  temporaryId: string | null;
+  possibleDuplicates: Array<{ code: string; similarity: number }>;
   storyId: string | null;
   storyCode: string | null;
   type: string;
@@ -276,6 +316,8 @@ export interface Job {
   analysisId: string | null;
   resultMessage: string | null;
   failureCount: number;
+  /** Análise de novas fontes: propostas por categoria. */
+  categoryCounts: Record<string, number>;
   stages: JobStage[];
   /** Histórias gravadas sem critérios porque a etapa de critérios falhou para elas. */
   criteriaFailureCount: number;

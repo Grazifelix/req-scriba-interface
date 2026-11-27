@@ -186,6 +186,12 @@ export const VisaoGeralScreen: React.FC<VisaoGeralScreenProps> = ({
                     <span className="material-symbols-outlined text-[13px]">auto_awesome</span>
                     Sugestão da IA
                   </span>
+                  {requirement.temporaryId && (
+                    <span className="ml-1.5 px-1.5 py-0.5 rounded bg-surface-container-high text-on-surface text-[11px] font-mono font-semibold">{requirement.temporaryId}</span>
+                  )}
+                  {requirement.possibleDuplicates.length > 0 && (
+                    <span className="ml-1.5 text-[11px] text-[#92400e]" title="Confira antes de aprovar">possível duplicidade com {requirement.possibleDuplicates.map((d) => d.code).join(', ')}</span>
+                  )}
                   <h4 className="text-sm font-bold text-on-surface truncate mt-1.5">{requirement.proposedTitle}</h4>
                   <p className="text-xs text-on-surface-variant truncate mt-0.5"><StoryText text={requirement.proposedText} /></p>
                 </div>

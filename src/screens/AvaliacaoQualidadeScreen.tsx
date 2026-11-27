@@ -27,12 +27,15 @@ import {
 } from '../api/stories.ts';
 import {
   approveSuggestion,
+  cancelSuggestion,
   rejectSuggestion,
   suggestionsKey,
   usePendingSuggestions,
   useSuggestion,
 } from '../api/suggestions.ts';
 import { AuditBadge, AuditDetails, EvidenceAuditPanel } from '../components/EvidenceAuditPanel.tsx';
+import { ImpactDetails } from '../components/ImpactDetails.tsx';
+import { VersionComparisonPanel } from '../components/VersionComparisonPanel.tsx';
 import { SourceEvidenceList } from '../components/SourceEvidenceList.tsx';
 import { StoryText } from '../components/StoryText.tsx';
 import { SuggestionPanel } from '../components/SuggestionPanel.tsx';
@@ -178,6 +181,7 @@ export const AvaliacaoQualidadeScreen: React.FC<AvaliacaoQualidadeScreenProps> =
   const [isGeneratingQuestions, setIsGeneratingQuestions] = useState(false);
   const [isGeneratingCriteria, setIsGeneratingCriteria] = useState(false);
   const [isAuditing, setIsAuditing] = useState(false);
+  const [comparedVersion, setComparedVersion] = useState<number | null>(null);
   const [suggestionIndex, setSuggestionIndex] = useState(0);
   const [dismissedRewrites, setDismissedRewrites] = useState(getDismissedRewrites);
 
@@ -263,15 +267,32 @@ export const AvaliacaoQualidadeScreen: React.FC<AvaliacaoQualidadeScreenProps> =
   // Reescrita que divide a história: a primeira parte fica nesta User Story e as demais viram novas.
   const handleApplySuggestion = async () => {
     let createdCodes: string[] = [];
+    let cancelled = false;
     const applied = await runChange(async () => {
-      if (updateSuggestion) return approveSuggestion(updateSuggestion.id);
+      if (updateSuggestion) {
+        cancelled = (await approveSuggestion(updateSuggestion.id)).cancelled;
+        return;
+      }
       createdCodes = await applyRewrite(storyId, rewrite ?? '');
     });
-    if (!applied) return;
+    if (!applied || cancelled) return;
+    if (updateSuggestion?.isConfirmation) {
+      setSuggestionIndex(0);
+      showToast('Evidências da nova fonte vinculadas. O texto da User Story não mudou.', 'link');
+      return;
+    }
     setSuggestionIndex(0);
     const created = createdCodes.length ? ` Criadas: ${createdCodes.join(', ')}.` : '';
     showToast(`Sugestão aplicada.${created} Reavaliando os 13 critérios...`, 'sync');
     evaluation.mutate(story.qualityScore);
+  };
+
+  const handleCancelSuggestion = async () => {
+    if (!updateSuggestion) return;
+    const reason = window.prompt('Motivo do cancelamento (opcional):', updateSuggestion.outdated ? 'Proposta desatualizada.' : '');
+    if (reason === null) return;
+    await runChange(() => cancelSuggestion(updateSuggestion.id, reason || undefined), 'Proposta cancelada. Ela fica registrada no histórico.');
+    setSuggestionIndex(0);
   };
 
   const handleRejectSuggestion = async () => {
@@ -602,9 +623,13 @@ export const AvaliacaoQualidadeScreen: React.FC<AvaliacaoQualidadeScreenProps> =
             onPrevious: () => setSuggestionIndex(index - 1),
             onNext: () => setSuggestionIndex(index + 1),
           }}
+          applyLabel={updateSuggestion?.isConfirmation ? 'Vincular evidências' : undefined}
           onApply={handleApplySuggestion}
           onReject={handleRejectSuggestion}
+          onCancel={updateSuggestion ? handleCancelSuggestion : undefined}
         />
+
+        {suggestionDetail && <ImpactDetails suggestion={suggestionDetail} />}
 
         {attentionMessages.length > 0 && (
           <div className="p-4 bg-[#fffbeb] border border-[#fcd34d] rounded-xl flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-xs">
@@ -710,6 +735,7 @@ export const AvaliacaoQualidadeScreen: React.FC<AvaliacaoQualidadeScreenProps> =
                       {ver.type}
                     </span>
                     <span className="text-[11px] text-on-surface-variant">por {ver.author}</span>
+                    {ver.statusLabel && <span className="text-[11px] text-on-surface-variant">· {ver.statusLabel}</span>}
                   </div>
                   <span className="text-xs text-outline font-medium flex items-center gap-1">
                     <span className="material-symbols-outlined text-[14px]">schedule</span>
@@ -719,6 +745,23 @@ export const AvaliacaoQualidadeScreen: React.FC<AvaliacaoQualidadeScreenProps> =
                 <div className="bg-white p-3 rounded-lg border border-surface-container mt-1">
                   <p className="text-xs text-on-surface leading-relaxed"><StoryText text={ver.text} /></p>
                 </div>
+                {ver.sources.length > 0 && (
+                  <span className="text-[11px] text-on-surface-variant flex items-center gap-1">
+                    <span className="material-symbols-outlined text-[13px]">source</span>
+                    Motivada por: {ver.sources.join(', ')}
+                  </span>
+                )}
+                {ver.number > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => setComparedVersion(comparedVersion === ver.number ? null : ver.number)}
+                    className="self-start text-[11px] text-primary hover:underline font-semibold flex items-center gap-1 cursor-pointer"
+                  >
+                    <span className="material-symbols-outlined text-[14px]">compare</span>
+                    {comparedVersion === ver.number ? 'Ocultar comparação' : `Comparar com v${ver.number - 1}`}
+                  </button>
+                )}
+                {comparedVersion === ver.number && <VersionComparisonPanel storyId={storyId} from={ver.number - 1} to={ver.number} />}
               </div>
             ))}
           </div>

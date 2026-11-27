@@ -128,7 +128,10 @@ const toVersions = (s: StoryOut): StoryVersion[] =>
   [...s.versoes]
     .sort((a, b) => b.numero - a.numero)
     .map((v) => ({
+      number: v.numero,
       version: `v${v.numero}`,
+      statusLabel: (v.status_historia_rotulo as string | null | undefined) ?? null,
+      sources: (v.fontes ?? []).map((f) => String((f as { nome_arquivo?: string }).nome_arquivo ?? '')).filter(Boolean),
       type: String(v.origem_alteracao_rotulo ?? v.origem_alteracao),
       isAi: v.originada_por_ia,
       author: v.responsavel,
@@ -308,6 +311,40 @@ export const generateCriteria = (storyId: string) =>
 // Auditoria semântica das evidências (VALIDACAO_EVIDENCIAS): não altera a história; 502 se o LLM falhar.
 export const auditEvidence = (storyId: string) =>
   apiRequest<unknown>(`/historias/${storyId}/auditoria-evidencias`, { method: 'POST' });
+
+export interface VersionComparison {
+  changedFields: string[];
+  addedCriteria: string[];
+  removedCriteria: string[];
+  criteriaTracked: boolean;
+  addedEvidence: string[];
+}
+
+const COMPARED_FIELD_LABELS: Record<string, string> = {
+  titulo: 'Título', perfil: 'Perfil', funcionalidade: 'Funcionalidade', beneficio: 'Benefício',
+  historia: 'Texto da história', criterios_aceitacao: 'Critérios de aceitação',
+};
+
+// Diferenças entre duas versões (US-20): campos, critérios por id permanente e evidências adicionadas.
+export const useVersionComparison = (storyId: string, from: number, to: number, enabled: boolean) =>
+  useQuery({
+    queryKey: ['comparacao-versoes', storyId, from, to],
+    enabled,
+    queryFn: async (): Promise<VersionComparison> => {
+      const c = await apiRequest<{
+        conteudo: { campos_alterados: string[] };
+        criterios: { registrados: boolean; adicionados: Array<{ criterio: string }>; removidos: Array<{ criterio: string }> };
+        evidencias: { adicionadas: Array<{ nome_arquivo: string; trecho: string }> };
+      }>(`/historias/${storyId}/versoes/comparacao?de=${from}&para=${to}`);
+      return {
+        changedFields: c.conteudo.campos_alterados.map((f) => COMPARED_FIELD_LABELS[f] ?? f),
+        addedCriteria: c.criterios.adicionados.map((x) => x.criterio),
+        removedCriteria: c.criterios.removidos.map((x) => x.criterio),
+        criteriaTracked: c.criterios.registrados,
+        addedEvidence: c.evidencias.adicionadas.map((e) => `${e.nome_arquivo}: ${e.trecho}`),
+      };
+    },
+  });
 
 export const structuralValidationKey = (storyId: string) => ['validacao-estrutural', storyId];
 

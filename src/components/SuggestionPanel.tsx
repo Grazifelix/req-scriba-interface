@@ -13,8 +13,11 @@ interface SuggestionPanelProps {
   changedFields?: string[];
   busy: boolean;
   position?: { index: number; total: number; onPrevious: () => void; onNext: () => void };
+  applyLabel?: string;
   onApply: () => void;
   onReject: () => void;
+  /** Cancelar a proposta (sem julgamento de mérito); o botão só aparece para propostas da análise de fontes. */
+  onCancel?: () => void;
 }
 
 export const SuggestionPanel: React.FC<SuggestionPanelProps> = ({
@@ -25,8 +28,10 @@ export const SuggestionPanel: React.FC<SuggestionPanelProps> = ({
   changedFields = [],
   busy,
   position,
+  applyLabel = 'Aplicar Sugestão',
   onApply,
   onReject,
+  onCancel,
 }) => {
   const hasSuggestion = suggestionText !== null;
   // Reescrita da avaliação que divide a história: "H1: Como …; H2: Como …".
@@ -73,6 +78,18 @@ export const SuggestionPanel: React.FC<SuggestionPanelProps> = ({
               </button>
             </div>
           )}
+          {onCancel && (
+            <button
+              onClick={onCancel}
+              disabled={!hasSuggestion || busy}
+              type="button"
+              title="A proposta deixa de valer (ex.: desatualizada ou fonte errada) e fica registrada"
+              className="px-4 py-2 rounded-lg bg-surface-container-low hover:bg-surface-container text-on-surface-variant text-xs font-semibold flex items-center gap-1.5 border border-surface-container transition-colors shadow-xs disabled:opacity-50 cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-[18px]">block</span>
+              <span>Cancelar proposta</span>
+            </button>
+          )}
           <button
             onClick={onReject}
             disabled={!hasSuggestion || busy}
@@ -89,7 +106,7 @@ export const SuggestionPanel: React.FC<SuggestionPanelProps> = ({
             className="px-4 py-2 rounded-lg bg-primary hover:bg-primary-container text-white text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-xs disabled:opacity-50 cursor-pointer"
           >
             <span className="material-symbols-outlined text-[18px]">check</span>
-            <span>Aplicar Sugestão</span>
+            <span>{applyLabel}</span>
           </button>
         </div>
       </div>

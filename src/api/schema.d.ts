@@ -553,7 +553,7 @@ export interface paths {
         put?: never;
         /**
          * Desaprovar história (US-06 CA03)
-         * @description A história deixa de integrar o backlog.
+         * @description A história deixa de integrar o backlog; as propostas pendentes sobre ela são canceladas.
          */
         post: operations["reject_story_api_v1_historias__historia_id__desaprovar_post"];
         delete?: never;
@@ -759,6 +759,26 @@ export interface paths {
         };
         /** Histórico de versões (US-20) */
         get: operations["list_versions_api_v1_historias__historia_id__versoes_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/historias/{historia_id}/versoes/comparacao": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Comparar duas versões (US-20)
+         * @description Sem parâmetros, compara a penúltima com a última. Traz as diferenças de campos e texto, os critérios adicionados, removidos e mantidos (por id permanente), as evidências adicionadas e as versões intermediárias com origem, responsável e fontes que motivaram cada mudança.
+         */
+        get: operations["compare_versions_api_v1_historias__historia_id__versoes_comparacao_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1028,7 +1048,7 @@ export interface paths {
         put?: never;
         /**
          * Analisar novas fontes (US-13)
-         * @description Compara novas transcrições/documentos com as histórias existentes e cria sugestões (complementa, contradiz, novo_requisito). Nenhuma história é alterada (US-14 CA04).
+         * @description Processa só as fontes novas (as já processadas são ignoradas, salvo `reprocessar`), recupera as histórias potencialmente relacionadas e aplica ANALISE_IMPACTO_FONTES. Cria propostas pendentes: confirmacao, complementacao, modificacao, contradicao e nova_necessidade. Nenhuma história é alterada sem aprovação (US-14 CA04).
          */
         post: operations["analyze_updates_api_v1_projetos__projeto_id__atualizacoes_analisar_post"];
         delete?: never;
@@ -1083,7 +1103,7 @@ export interface paths {
         put?: never;
         /**
          * Aprovar e aplicar sugestão (US-15 CA02/CA04)
-         * @description Aplica a alteração, cria nova versão (origem IA) e registra as novas evidências (US-18).
+         * @description Aplica a alteração, cria nova versão (origem IA) e registra as novas evidências (US-18). Confirmação só vincula as evidências. Nova necessidade recebe o código definitivo. 409 `proposta_desatualizada` se a história mudou depois da proposta (confirme com `aceitar_desatualizada`); 409 `possivel_duplicidade` se a candidata repete uma história ativa (confirme com `aceitar_duplicidade`).
          */
         post: operations["approve_suggestion_api_v1_sugestoes_atualizacao__sugestao_id__aprovar_post"];
         delete?: never;
@@ -1106,6 +1126,26 @@ export interface paths {
          * @description A história atual é preservada.
          */
         post: operations["reject_suggestion_api_v1_sugestoes_atualizacao__sugestao_id__rejeitar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sugestoes-atualizacao/{sugestao_id}/cancelar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cancelar sugestão
+         * @description A proposta deixa de valer sem julgamento de mérito (ex.: desatualizada). Fica preservada com o motivo. Só propostas pendentes (senão 409).
+         */
+        post: operations["cancel_suggestion_api_v1_sugestoes_atualizacao__sugestao_id__cancelar_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1389,6 +1429,12 @@ export interface components {
             audio_ids?: number[];
             /** Documento Ids */
             documento_ids?: number[];
+            /**
+             * Reprocessar
+             * @description Analisa também fontes já processadas por outro job de geração ou de atualização.
+             * @default false
+             */
+            reprocessar: boolean;
         };
         /** AnalysisUpdate */
         AnalysisUpdate: {
@@ -2304,6 +2350,26 @@ export interface components {
         SuggestionApprove: {
             /** @description Edição final opcional aplicada antes da aprovação */
             conteudo_proposto?: components["schemas"]["SuggestionEdit"] | null;
+            /**
+             * Aceitar Desatualizada
+             * @description A história mudou depois da proposta: aplicar mesmo assim só os campos que a proposta altera, preservando o que mudou depois (sem isso → 409).
+             * @default false
+             */
+            aceitar_desatualizada: boolean;
+            /**
+             * Aceitar Duplicidade
+             * @description Nova necessidade parecida com uma história ativa: criar mesmo assim (sem isso → 409).
+             * @default false
+             */
+            aceitar_duplicidade: boolean;
+        };
+        /** SuggestionDecision */
+        SuggestionDecision: {
+            /**
+             * Motivo
+             * @description Motivo da rejeição ou do cancelamento
+             */
+            motivo?: string | null;
         };
         /** SuggestionEdit */
         SuggestionEdit: {
@@ -2338,7 +2404,7 @@ export interface components {
             historia_id: number | null;
             /**
              * Tipo
-             * @description complementa | contradiz | novo_requisito
+             * @description confirmacao | complementacao | modificacao | contradicao | nova_necessidade (complementa | contradiz | novo_requisito: sugestões anteriores ao Milestone 3)
              */
             tipo: string;
             /** Tipo Rotulo */
@@ -2385,6 +2451,20 @@ export interface components {
             comparacao?: {
                 [key: string]: unknown;
             } | null;
+            /**
+             * Versao Base
+             * @description Versão da história quando a proposta foi gerada
+             */
+            versao_base?: number | null;
+            /** Versao Atual Historia */
+            versao_atual_historia?: number | null;
+            /**
+             * Detalhes
+             * @description componentes_afetados, criterios_afetados, categoria_original (reclassificação), conflitos, alternativa_proposta, sinais_recuperacao; nas novas necessidades: id_temporario, possiveis_duplicidades
+             */
+            detalhes?: {
+                [key: string]: unknown;
+            };
         } & {
             [key: string]: unknown;
         };
@@ -2469,6 +2549,18 @@ export interface components {
              * @description Critérios vigentes nesta versão
              */
             criterio_ids?: number[];
+            /**
+             * Fontes
+             * @description Fontes que motivaram a versão: as das evidências vinculadas desde a anterior
+             */
+            fontes?: {
+                [key: string]: unknown;
+            }[];
+            /**
+             * Status Historia
+             * @description Status da história quando a versão foi criada
+             */
+            status_historia?: string | null;
             /** Responsavel */
             responsavel: string;
             /** Data Hora */
@@ -4844,7 +4936,9 @@ export interface operations {
     reject_story_api_v1_historias__historia_id__desaprovar_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "x-usuario"?: string | null;
+            };
             path: {
                 historia_id: number;
             };
@@ -5511,6 +5605,67 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["VersionList"];
+                };
+            };
+            /** @description Recurso não encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflito de estado */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Entrada inválida ou regra de negócio violada */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Falha em serviço externo (LLM, embeddings, ChromaDB, ASR) */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    compare_versions_api_v1_historias__historia_id__versoes_comparacao_get: {
+        parameters: {
+            query?: {
+                de?: number | null;
+                para?: number | null;
+            };
+            header?: never;
+            path: {
+                historia_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
                 };
             };
             /** @description Recurso não encontrado */
@@ -6457,7 +6612,8 @@ export interface operations {
     list_suggestions_api_v1_projetos__projeto_id__sugestoes_atualizacao_get: {
         parameters: {
             query?: {
-                status?: ("pendente" | "aprovada" | "rejeitada") | null;
+                status?: ("pendente" | "aprovada" | "rejeitada" | "cancelada") | null;
+                historia_id?: number | null;
             };
             header?: never;
             path: {
@@ -6709,7 +6865,75 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["SuggestionDecision"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuggestionOut"];
+                };
+            };
+            /** @description Recurso não encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflito de estado */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Entrada inválida ou regra de negócio violada */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Falha em serviço externo (LLM, embeddings, ChromaDB, ASR) */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    cancel_suggestion_api_v1_sugestoes_atualizacao__sugestao_id__cancelar_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-usuario"?: string | null;
+            };
+            path: {
+                sugestao_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["SuggestionDecision"] | null;
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {

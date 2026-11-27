@@ -3,7 +3,8 @@ import { useQueryClient } from '@tanstack/react-query';
 import { errorMessage } from '../api/client.ts';
 import { PROJECTS_QUERY_KEY } from '../api/projects.ts';
 import { evaluateStory, storiesKey } from '../api/stories.ts';
-import { approveSuggestion, rejectSuggestion, suggestionsKey, useSuggestion } from '../api/suggestions.ts';
+import { approveSuggestion, cancelSuggestion, rejectSuggestion, suggestionsKey, useSuggestion } from '../api/suggestions.ts';
+import { ImpactDetails } from '../components/ImpactDetails.tsx';
 import { SourceEvidenceList } from '../components/SourceEvidenceList.tsx';
 import { StoryText } from '../components/StoryText.tsx';
 import { SuggestionPanel } from '../components/SuggestionPanel.tsx';
@@ -39,7 +40,11 @@ export const NovoRequisitoScreen: React.FC<NovoRequisitoScreenProps> = ({
   const handleApply = async () => {
     setIsBusy(true);
     try {
-      const storyId = await approveSuggestion(suggestionId);
+      const { cancelled, createdStoryId: storyId } = await approveSuggestion(suggestionId);
+      if (cancelled) {
+        setIsBusy(false);
+        return;
+      }
       await refresh();
       if (!storyId) {
         onNavigate('visao-geral');
@@ -54,6 +59,21 @@ export const NovoRequisitoScreen: React.FC<NovoRequisitoScreenProps> = ({
           refresh();
           queryClient.invalidateQueries({ queryKey: ['historia', storyId] });
         });
+    } catch (e) {
+      showToast(errorMessage(e), 'error');
+      setIsBusy(false);
+    }
+  };
+
+  const handleCancel = async () => {
+    const reason = window.prompt('Motivo do cancelamento (opcional):', '');
+    if (reason === null) return;
+    setIsBusy(true);
+    try {
+      await cancelSuggestion(suggestionId, reason || undefined);
+      await refresh();
+      showToast('Proposta cancelada. Ela fica registrada no histórico.');
+      onNavigate('visao-geral');
     } catch (e) {
       showToast(errorMessage(e), 'error');
       setIsBusy(false);
@@ -96,9 +116,13 @@ export const NovoRequisitoScreen: React.FC<NovoRequisitoScreenProps> = ({
         suggestionText={suggestion.proposedText}
         notice={`${suggestion.typeLabel}: ${suggestion.justification}`}
         busy={isBusy}
+        applyLabel="Criar User Story"
         onApply={handleApply}
         onReject={handleReject}
+        onCancel={handleCancel}
       />
+
+      <ImpactDetails suggestion={suggestion} />
 
       {suggestion.proposedCriteria.length > 0 && (
         <section className="bg-white rounded-xl p-6 shadow-xs border border-surface-container flex flex-col gap-3">

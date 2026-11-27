@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { latestAnalysisKey } from '../api/analyses.ts';
 import { GENERATION_STAGES, isJobActive, useJobs } from '../api/jobs.ts';
+import { CATEGORY_LABELS } from '../api/suggestions.ts';
 import { PROJECTS_QUERY_KEY } from '../api/projects.ts';
 import { storiesKey, useStories } from '../api/stories.ts';
 import { suggestionsKey } from '../api/suggestions.ts';
@@ -29,6 +30,13 @@ const finishedMessage = (job: Job): string => {
   if (job.type === 'geracao_criterios') {
     const failures = job.failureCount > 0 ? ` ${job.failureCount} história(s) falharam; gere os critérios delas de novo.` : '';
     return `${job.typeLabel} concluída: ${job.resultMessage ?? `${job.createdCount} história(s) atualizada(s).`}${failures}`;
+  }
+  if (job.type === 'analise_atualizacao' && job.createdCount > 0) {
+    const parts = Object.entries(job.categoryCounts)
+      .filter(([, n]) => n > 0)
+      .map(([category, n]) => `${n} ${(CATEGORY_LABELS[category] ?? category).toLowerCase()}`);
+    const failures = job.failureCount > 0 ? ` ${job.failureCount} lote(s) falharam.` : '';
+    return `${job.typeLabel} concluída: ${job.createdCount} proposta(s) para revisar (${parts.join(', ')}). Nada muda sem a sua aprovação.${failures}`;
   }
   const noun = job.isAnalysis ? 'sugestão(ões)' : 'história(s)';
   const failures = job.failureCount > 0 ? ` ${job.failureCount} etapa(s) falharam.` : '';
