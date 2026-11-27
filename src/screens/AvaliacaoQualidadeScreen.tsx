@@ -28,20 +28,20 @@ import {
 } from '../api/stories.ts';
 import {
   approveSuggestion,
-  cancelSuggestion,
   rejectSuggestion,
   suggestionsKey,
   usePendingSuggestions,
   useSuggestion,
 } from '../api/suggestions.ts';
-import { AuditBadge, AuditDetails, EvidenceAuditPanel } from '../components/EvidenceAuditPanel.tsx';
-import { ImpactDetails } from '../components/ImpactDetails.tsx';
+import { AcceptanceCriteriaCard } from '../components/AcceptanceCriteriaCard.tsx';
+import { EvidenceAuditPanel } from '../components/EvidenceAuditPanel.tsx';
+import { ImpactProposalPanel } from '../components/ImpactProposalPanel.tsx';
 import { VersionComparisonPanel } from '../components/VersionComparisonPanel.tsx';
 import { SourceEvidenceList } from '../components/SourceEvidenceList.tsx';
 import { StoryText } from '../components/StoryText.tsx';
 import { SuggestionPanel } from '../components/SuggestionPanel.tsx';
 import { SuggestionIndicator } from '../components/SuggestionIndicator.tsx';
-import { AuditItem, HeuristicCategory, HeuristicItem, Project, ScreenType, TestCriterion } from '../types.ts';
+import { HeuristicCategory, HeuristicItem, Project, ScreenType, TestCriterion } from '../types.ts';
 
 const TOTAL_CRITERIA = 13;
 
@@ -69,99 +69,6 @@ const HeuristicCard: React.FC<{ item: HeuristicItem }> = ({ item }) => {
           {item.tip}
         </span>
       )}
-    </div>
-  );
-};
-
-const GHERKIN_PARTS = [
-  ['Dado', 'given'],
-  ['Quando', 'when'],
-  ['Então', 'then'],
-] as const;
-
-// Critério de aceitação: Dado/Quando/Então (quando gerado pela IA), trechos que o sustentam e sinalizações.
-const CriterionCard: React.FC<{
-  criterion: TestCriterion;
-  index: number;
-  busy: boolean;
-  audit?: AuditItem;
-  onDelete: () => void;
-  onConfirm: () => void;
-  onRegenerate: () => void;
-}> = ({ criterion, index, busy, audit, onDelete, onConfirm, onRegenerate }) => {
-  const structured = Boolean(criterion.when || criterion.then);
-  return (
-    <div data-testid="criterion" className={`bg-surface-container-low rounded-xl p-4 border flex items-start justify-between gap-4 group ${criterion.outdated ? 'border-[#fcd34d]' : 'border-surface-container'}`}>
-      <div className="flex items-start gap-3 min-w-0">
-        <span className="w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs shrink-0 mt-0.5">{index + 1}</span>
-        <div className="flex flex-col gap-1.5 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-xs font-bold text-on-surface">{criterion.title}</span>
-            {criterion.aiGenerated && (
-              <span className="px-1.5 py-0.5 rounded bg-primary-fixed text-primary text-[10px] font-semibold" title="Gerado pela IA a partir das evidências da User Story">IA</span>
-            )}
-            {audit && <AuditBadge item={audit} />}
-            {criterion.outdated && (
-              <span data-testid="criterion-outdated" className="px-1.5 py-0.5 rounded bg-[#fef3c7] text-[#92400e] text-[10px] font-semibold" title={criterion.outdatedReason ?? ''}>
-                Desatualizado
-              </span>
-            )}
-            {criterion.storyVersion && <span className="text-[10px] text-outline">desde a v{criterion.storyVersion}</span>}
-          </div>
-          {criterion.outdated && (
-            <div className="flex flex-col gap-1 bg-[#fffbeb] border border-[#fde68a] rounded-lg p-2">
-              <span className="text-[11px] text-[#92400e]">{criterion.outdatedReason}</span>
-              <div className="flex gap-2">
-                <button type="button" onClick={onConfirm} disabled={busy} className="text-[11px] font-semibold text-tertiary hover:underline disabled:opacity-50 cursor-pointer">Confirmar que continua válido</button>
-                <button type="button" onClick={onRegenerate} disabled={busy} className="text-[11px] font-semibold text-secondary hover:underline disabled:opacity-50 cursor-pointer">Regerar este critério</button>
-              </div>
-            </div>
-          )}
-          {structured ? (
-            <dl className="grid grid-cols-[auto_1fr] gap-x-2 gap-y-0.5 text-xs leading-relaxed">
-              {GHERKIN_PARTS.map(([label, key]) =>
-                criterion[key] ? (
-                  <React.Fragment key={key}>
-                    <dt className="font-semibold text-primary">{label}</dt>
-                    <dd className="text-on-surface">{criterion[key]}</dd>
-                  </React.Fragment>
-                ) : null
-              )}
-            </dl>
-          ) : (
-            <p className="text-xs text-on-surface leading-relaxed whitespace-pre-line">{criterion.criterion}</p>
-          )}
-          {criterion.sources.length > 0 && (
-            <ul data-testid="criterion-sources" className="flex flex-col gap-1 mt-1">
-              {criterion.sources.map((source) => (
-                <li key={source.chunkId} className="text-[11px] text-on-surface-variant flex items-start gap-1">
-                  <span className="material-symbols-outlined text-[13px] text-primary mt-px">link</span>
-                  <span className="min-w-0">
-                    <span className="font-semibold text-on-surface">{source.fileName}</span>
-                    {source.location && <span> · {source.location}</span>}
-                    {source.parts.length > 0 && <span> · sustenta: {source.parts.join(', ')}</span>}
-                    {source.quote && <span className="block italic line-clamp-2" title={source.quote}>"{source.quote}"</span>}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-          {audit && <AuditDetails item={audit} />}
-          {criterion.warnings.length > 0 && (
-            <ul data-testid="criterion-warnings" className="flex flex-col gap-0.5">
-              {criterion.warnings.map((warning, i) => (
-                <li key={i} className="text-[11px] text-[#92400e] flex items-start gap-1">
-                  <span className="material-symbols-outlined text-[13px] mt-px">warning</span>
-                  <span>{warning}</span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      </div>
-      <button onClick={onDelete} disabled={busy} title="Excluir regra" type="button" className="text-outline hover:text-error p-1 rounded transition-colors shrink-0 cursor-pointer">
-        <span className="material-symbols-outlined text-[18px]">delete_outline</span>
-      </button>
     </div>
   );
 };
@@ -246,7 +153,8 @@ export const AvaliacaoQualidadeScreen: React.FC<AvaliacaoQualidadeScreenProps> =
 
   // Reescrita da avaliação: só aparece sem sugestão de atualização pendente e se ainda mudar o texto.
   const pendingStoryRewrite = pendingRewrite(story, dismissedRewrites);
-  const rewrite = updateSuggestion ? null : pendingStoryRewrite;
+  // A reescrita da avaliação fica na "Sugestão de Melhoria de Texto"; as propostas das novas fontes, no componente próprio.
+  const rewrite = pendingStoryRewrite;
   const recommendationCount = storySuggestions.length + (pendingStoryRewrite ? 1 : 0);
 
   const isBusy = isSaving || isAnalyzing || isGeneratingCriteria || isAuditing;
@@ -284,50 +192,50 @@ export const AvaliacaoQualidadeScreen: React.FC<AvaliacaoQualidadeScreenProps> =
 
   // Aplicar: a sugestão vira a versão atual e os 13 critérios são reavaliados. Nunca aprova a história.
   // Reescrita que divide a história: a primeira parte fica nesta User Story e as demais viram novas.
-  const handleApplySuggestion = async () => {
+  // Reescrita da avaliação QUS ("Sugestão de Melhoria de Texto"): a sugestão vira a versão atual e os 13 critérios
+  // são reavaliados. Reescrita que divide a história: a 1ª parte fica nesta User Story e as demais viram novas.
+  const handleApplyRewrite = async () => {
     let createdCodes: string[] = [];
-    let cancelled = false;
     const applied = await runChange(async () => {
-      if (updateSuggestion) {
-        cancelled = (await approveSuggestion(updateSuggestion.id)).cancelled;
-        return;
-      }
       createdCodes = await applyRewrite(storyId, rewrite ?? '');
     });
-    if (!applied || cancelled) return;
-    if (updateSuggestion?.criteriaReview) {
-      setSuggestionIndex(0);
-      showToast('Novos critérios aplicados. Os anteriores ficam no histórico de versões.', 'checklist');
-      return;
-    }
-    if (updateSuggestion?.isConfirmation) {
-      setSuggestionIndex(0);
-      showToast('Evidências da nova fonte vinculadas. O texto da User Story não mudou.', 'link');
-      return;
-    }
-    setSuggestionIndex(0);
+    if (!applied) return;
     const created = createdCodes.length ? ` Criadas: ${createdCodes.join(', ')}.` : '';
     showToast(`Sugestão aplicada.${created} Reavaliando os 13 critérios...`, 'sync');
     evaluation.mutate(story.qualityScore);
   };
 
-  const handleCancelSuggestion = async () => {
-    if (!updateSuggestion) return;
-    const reason = window.prompt('Motivo do cancelamento (opcional):', updateSuggestion.outdated ? 'Proposta desatualizada.' : '');
-    if (reason === null) return;
-    await runChange(() => cancelSuggestion(updateSuggestion.id, reason || undefined), 'Proposta cancelada. Ela fica registrada no histórico.');
-    setSuggestionIndex(0);
+  const handleRejectRewrite = () => {
+    if (!rewrite) return;
+    dismissRewrite(storyId, rewrite);
+    setDismissedRewrites(getDismissedRewrites());
+    showToast('Sugestão rejeitada. A User Story foi mantida.');
   };
 
-  const handleRejectSuggestion = async () => {
-    if (updateSuggestion) {
-      await runChange(() => rejectSuggestion(updateSuggestion.id), 'Sugestão rejeitada. A User Story foi mantida.');
-      setSuggestionIndex(0);
-    } else if (rewrite) {
-      dismissRewrite(storyId, rewrite);
-      setDismissedRewrites(getDismissedRewrites());
-      showToast('Sugestão rejeitada. A User Story foi mantida.');
+  // Proposta das novas fontes: aprovar pode pedir confirmação (proposta desatualizada). Só reavalia a qualidade
+  // quando o texto da User Story muda.
+  const handleApproveProposal = async () => {
+    if (!updateSuggestion) return;
+    let cancelled = false;
+    const applied = await runChange(async () => {
+      cancelled = (await approveSuggestion(updateSuggestion.id)).cancelled;
+    });
+    if (!applied || cancelled) return;
+    setSuggestionIndex(0);
+    if (updateSuggestion.criteriaReview) {
+      showToast('Novos critérios aplicados. Os anteriores ficam no histórico de versões.', 'checklist');
+    } else if (['confirmacao', 'complementacao', 'contradicao'].includes(updateSuggestion.type)) {
+      showToast('Evidências da nova fonte vinculadas. O texto da User Story não mudou.', 'link');
+    } else {
+      showToast('Proposta aplicada. Reavaliando os 13 critérios...', 'sync');
+      evaluation.mutate(story.qualityScore);
     }
+  };
+
+  const handleRejectProposal = async () => {
+    if (!updateSuggestion) return;
+    await runChange(() => rejectSuggestion(updateSuggestion.id), 'Proposta rejeitada. A User Story foi mantida.');
+    setSuggestionIndex(0);
   };
 
   const handleAddRule = async (e: React.SyntheticEvent) => {
@@ -584,97 +492,52 @@ export const AvaliacaoQualidadeScreen: React.FC<AvaliacaoQualidadeScreenProps> =
           </div>
         </div>
 
-        <section className="bg-white rounded-xl p-6 shadow-xs border border-surface-container flex flex-col gap-4">
-          <div className="flex flex-wrap items-center justify-between gap-3 pb-2 border-b border-surface-container">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-surface-container-high text-primary flex items-center justify-center">
-                <span className="material-symbols-outlined text-[20px]">checklist</span>
-              </div>
-              <div>
-                <h2 className="text-base font-bold text-on-surface">Critérios de Teste (Regras Simples)</h2>
-                <p className="text-xs text-on-surface-variant">Critérios objetivos para verificar a entrega</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2 flex-wrap">
-              <button
-                onClick={() => handleGenerateCriteria()}
-                disabled={isBusy}
-                type="button"
-                title={isApproved ? 'User Story aprovada: os critérios gerados viram uma proposta para revisão' : 'Gera critérios a partir das evidências desta User Story'}
-                className="px-3.5 py-1.5 rounded-lg bg-surface-container-low hover:bg-surface-container text-secondary text-xs font-semibold flex items-center gap-1 border border-surface-container transition-colors shadow-xs disabled:opacity-50 cursor-pointer"
-              >
-                <span className="material-symbols-outlined text-[18px]">auto_awesome</span>
-                <span>
-                  {isGeneratingCriteria
-                    ? 'Gerando...'
-                    : outdatedCount > 0
-                      ? `Regerar desatualizados (${outdatedCount})`
-                      : story.criteria.length > 0 ? 'Regerar critérios' : 'Gerar critérios'}
-                </span>
-              </button>
-              <button onClick={() => setNewRuleModalOpen(true)} disabled={isBusy} type="button" className="px-3.5 py-1.5 rounded-lg bg-surface-container-low hover:bg-surface-container text-primary text-xs font-semibold flex items-center gap-1 border border-surface-container transition-colors shadow-xs disabled:opacity-50 cursor-pointer">
-                <span className="material-symbols-outlined text-[18px]">add</span>
-                <span>Adicionar Regra</span>
-              </button>
-            </div>
-          </div>
-
-          {story.criteriaGaps.length > 0 && (
-            <div data-testid="criteria-gaps" className="p-3 bg-[#fffbeb] border border-[#fcd34d] rounded-lg flex items-start gap-2">
-              <span className="material-symbols-outlined text-[18px] text-[#d97706]">info</span>
-              <div className="flex flex-col gap-0.5">
-                <span className="text-xs font-bold text-[#78350f]">O que falta nas fontes para os critérios</span>
-                <ul className="text-xs text-[#92400e] leading-relaxed list-disc pl-4">
-                  {story.criteriaGaps.map((gap, i) => <li key={i}>{gap}</li>)}
-                </ul>
-              </div>
-            </div>
-          )}
-
-          <div className="flex flex-col gap-3">
-            {story.criteria.length === 0 && <p className="text-xs text-on-surface-variant text-center py-3">Nenhum critério definido.</p>}
-            {story.criteria.map((criterion, idx) => (
-              <CriterionCard
-                key={criterion.id}
-                criterion={criterion}
-                index={idx}
-                busy={isBusy}
-                audit={criterion.criterionId != null ? story.evidenceAudit?.criteria[criterion.criterionId] : undefined}
-                onDelete={() => handleDeleteRule(criterion.id)}
-                onConfirm={() => criterion.criterionId != null && handleConfirmCriterion(criterion.criterionId)}
-                onRegenerate={() => criterion.criterionId != null && handleGenerateCriteria([criterion.criterionId])}
-              />
-            ))}
-          </div>
-        </section>
+        <AcceptanceCriteriaCard
+          criteria={story.criteria}
+          gaps={story.criteriaGaps}
+          audits={story.evidenceAudit?.criteria}
+          busy={isBusy}
+          generating={isGeneratingCriteria}
+          approved={isApproved}
+          onGenerate={handleGenerateCriteria}
+          onAdd={() => setNewRuleModalOpen(true)}
+          onDelete={handleDeleteRule}
+          onConfirm={handleConfirmCriterion}
+        />
 
         <EvidenceAuditPanel
           audit={story.evidenceAudit}
           issues={structuralIssues}
+          texts={{ perfil: story.actor, funcionalidade: story.action, beneficio: story.benefit }}
           busy={isBusy}
           auditing={isAuditing}
           onAudit={handleAudit}
         />
 
+        {updateSuggestion && (
+          <ImpactProposalPanel
+            suggestion={suggestionDetail ?? updateSuggestion}
+            currentText={story.summary}
+            busy={isBusy}
+            position={{
+              index,
+              total: storySuggestions.length,
+              onPrevious: () => setSuggestionIndex(index - 1),
+              onNext: () => setSuggestionIndex(index + 1),
+            }}
+            onApprove={handleApproveProposal}
+            onReject={handleRejectProposal}
+          />
+        )}
+
         <SuggestionPanel
           currentText={story.summary}
-          suggestionText={updateSuggestion ? updateSuggestion.proposedText : rewrite}
-          notice={updateSuggestion ? `${updateSuggestion.typeLabel}: ${updateSuggestion.justification}` : 'Reescrita sugerida pela avaliação de qualidade.'}
-          changedFields={suggestionDetail?.changedFields}
+          suggestionText={rewrite}
+          notice="Reescrita sugerida pela avaliação de qualidade."
           busy={isBusy}
-          position={{
-            index,
-            total: storySuggestions.length,
-            onPrevious: () => setSuggestionIndex(index - 1),
-            onNext: () => setSuggestionIndex(index + 1),
-          }}
-          applyLabel={updateSuggestion?.isConfirmation ? 'Vincular evidências' : updateSuggestion?.criteriaReview ? 'Aplicar novos critérios' : undefined}
-          onApply={handleApplySuggestion}
-          onReject={handleRejectSuggestion}
-          onCancel={updateSuggestion ? handleCancelSuggestion : undefined}
+          onApply={handleApplyRewrite}
+          onReject={handleRejectRewrite}
         />
-
-        {suggestionDetail && <ImpactDetails suggestion={suggestionDetail} />}
 
         {attentionMessages.length > 0 && (
           <div className="p-4 bg-[#fffbeb] border border-[#fcd34d] rounded-xl flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-xs">

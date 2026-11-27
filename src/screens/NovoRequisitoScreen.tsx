@@ -3,11 +3,10 @@ import { useQueryClient } from '@tanstack/react-query';
 import { errorMessage } from '../api/client.ts';
 import { PROJECTS_QUERY_KEY } from '../api/projects.ts';
 import { evaluateStory, storiesKey } from '../api/stories.ts';
-import { approveSuggestion, cancelSuggestion, rejectSuggestion, suggestionsKey, useSuggestion } from '../api/suggestions.ts';
-import { ImpactDetails } from '../components/ImpactDetails.tsx';
+import { approveSuggestion, rejectSuggestion, suggestionsKey, useSuggestion } from '../api/suggestions.ts';
+import { ImpactProposalPanel } from '../components/ImpactProposalPanel.tsx';
 import { SourceEvidenceList } from '../components/SourceEvidenceList.tsx';
 import { StoryText } from '../components/StoryText.tsx';
-import { SuggestionPanel } from '../components/SuggestionPanel.tsx';
 import { Project, ScreenType } from '../types.ts';
 
 interface NovoRequisitoScreenProps {
@@ -65,21 +64,6 @@ export const NovoRequisitoScreen: React.FC<NovoRequisitoScreenProps> = ({
     }
   };
 
-  const handleCancel = async () => {
-    const reason = window.prompt('Motivo do cancelamento (opcional):', '');
-    if (reason === null) return;
-    setIsBusy(true);
-    try {
-      await cancelSuggestion(suggestionId, reason || undefined);
-      await refresh();
-      showToast('Proposta cancelada. Ela fica registrada no histórico.');
-      onNavigate('visao-geral');
-    } catch (e) {
-      showToast(errorMessage(e), 'error');
-      setIsBusy(false);
-    }
-  };
-
   const handleReject = async () => {
     setIsBusy(true);
     try {
@@ -110,19 +94,14 @@ export const NovoRequisitoScreen: React.FC<NovoRequisitoScreenProps> = ({
         <h1 className="text-xl sm:text-2xl font-bold text-on-surface tracking-tight">{suggestion.proposedTitle}</h1>
       </div>
 
-      <SuggestionPanel
-        currentLabel="Versão Atual"
-        currentText="Nenhuma: este possível novo requisito ainda não existe no backlog."
-        suggestionText={suggestion.proposedText}
-        notice={`${suggestion.typeLabel}: ${suggestion.justification}`}
+      <ImpactProposalPanel
+        suggestion={suggestion}
+        currentText={null}
         busy={isBusy}
-        applyLabel="Criar User Story"
-        onApply={handleApply}
+        onApprove={handleApply}
         onReject={handleReject}
-        onCancel={handleCancel}
+        showExcerpts={false}
       />
-
-      <ImpactDetails suggestion={suggestion} />
 
       {suggestion.proposedCriteria.length > 0 && (
         <section className="bg-white rounded-xl p-6 shadow-xs border border-surface-container flex flex-col gap-3">
