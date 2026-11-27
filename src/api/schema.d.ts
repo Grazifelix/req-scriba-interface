@@ -495,10 +495,30 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Gerar critérios de aceitação de uma história
-         * @description Etapa GERACAO_CRITERIOS_ACEITACAO para uma história já gravada, a partir das evidências dela e de trechos relacionados. A história não é alterada; os critérios substituem os atuais numa nova versão (origem `geracao_criterios_ia`), e a versão anterior é preservada. Sem base nas fontes, nenhum critério é inventado: a lacuna fica em `informacoes_ausentes`. História aprovada → 409 (o LLM não altera histórias aprovadas); falha do LLM → 502.
+         * Gerar ou regerar critérios de aceitação de uma história
+         * @description Etapa GERACAO_CRITERIOS_ACEITACAO a partir das evidências da história e de trechos relacionados. `escopo` auto (padrão): regera os critérios desatualizados, ou todos se não houver; `criterio_ids` regera só os escolhidos. Os que continuam valendo vão ao prompt como já validados e são mantidos; os substituídos ficam preservados. A história não é alterada; os critérios mudam numa nova versão (origem `geracao_criterios_ia`). História aprovada: vira uma proposta pendente `revisao_criterios` (`proposta_criterios_id`), porque o LLM não altera histórias aprovadas (409 se já houver uma pendente). Falha do LLM → 502.
          */
         post: operations["generate_criteria_api_v1_historias__historia_id__criterios_gerar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/historias/{historia_id}/criterios/{criterio_id}/confirmar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Confirmar que um critério continua válido
+         * @description Depois de uma mudança na história, o critério fica desatualizado até ser confirmado ou regerado. Confirmar o marca válido na versão atual (não cria versão).
+         */
+        post: operations["confirm_criterion_api_v1_historias__historia_id__criterios__criterio_id__confirmar_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -516,7 +536,7 @@ export interface paths {
         put?: never;
         /**
          * Gerar critérios de aceitação em lote
-         * @description Cria um job (`geracao_criterios`) que processa várias histórias por chamada ao LLM e grava cada lote assim que ele termina. Histórias aprovadas ou desaprovadas são ignoradas, assim como as que já têm critérios (a menos que `substituir` seja true).
+         * @description Cria um job (`geracao_criterios`) que processa várias histórias por chamada ao LLM e grava cada lote assim que ele termina. Entram as histórias sem critérios e as com critérios desatualizados (só esses são regerados); com `substituir`, também as demais. Histórias aprovadas geram propostas `revisao_criterios`; desaprovadas são ignoradas.
          */
         post: operations["generate_criteria_batch_api_v1_projetos__projeto_id__criterios_gerar_post"];
         delete?: never;
@@ -1223,6 +1243,17 @@ export interface components {
              * @description vigente | substituido
              */
             status?: string | null;
+            /**
+             * Situacao
+             * @description valido | desatualizado (a história mudou depois do critério; confirme ou regenere)
+             */
+            situacao?: string | null;
+            /** Validado Na Versao */
+            validado_na_versao?: number | null;
+            /** Desatualizado Na Versao */
+            desatualizado_na_versao?: number | null;
+            /** Motivo Situacao */
+            motivo_situacao?: string | null;
             /** Titulo */
             titulo: string;
             /**
@@ -1565,10 +1596,25 @@ export interface components {
             historia_ids?: number[];
             /**
              * Substituir
-             * @description Também regera histórias que já têm critérios (a versão anterior é preservada).
+             * @description Também regera histórias com critérios válidos (sem isso, entram só as sem critérios e as com critérios desatualizados). A versão anterior é preservada.
              * @default false
              */
             substituir: boolean;
+        };
+        /** CriteriaRegenerationRequest */
+        CriteriaRegenerationRequest: {
+            /**
+             * Escopo
+             * @description auto: os desatualizados, ou todos se não houver nenhum
+             * @default auto
+             * @enum {string}
+             */
+            escopo: "auto" | "desatualizados" | "todos";
+            /**
+             * Criterio Ids
+             * @description Regera só estes critérios (os demais são mantidos)
+             */
+            criterio_ids?: number[];
         };
         /** CriterionSourceOut */
         CriterionSourceOut: {
@@ -4759,6 +4805,69 @@ export interface operations {
             };
             path: {
                 historia_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["CriteriaRegenerationRequest"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StoryOut"];
+                };
+            };
+            /** @description Recurso não encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflito de estado */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Entrada inválida ou regra de negócio violada */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Falha em serviço externo (LLM, embeddings, ChromaDB, ASR) */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    confirm_criterion_api_v1_historias__historia_id__criterios__criterio_id__confirmar_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                historia_id: number;
+                criterio_id: number;
             };
             cookie?: never;
         };

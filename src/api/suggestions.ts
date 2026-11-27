@@ -23,6 +23,7 @@ export const CATEGORY_LABELS: Record<string, string> = {
   modificacao: 'Modificação',
   contradicao: 'Contradição',
   nova_necessidade: 'Nova necessidade',
+  revisao_criterios: 'Revisão de critérios',
   complementa: 'Complementa',
   contradiz: 'Contradiz',
   novo_requisito: 'Novo requisito',
@@ -42,6 +43,9 @@ type DetailsOut = {
   alternativa_proposta?: string | null;
   id_temporario?: string | null;
   possiveis_duplicidades?: Array<{ codigo: string; similaridade: number }>;
+  criterios_substituidos?: Array<{ criterio: string }>;
+  criterios_mantidos?: Array<{ criterio: string }>;
+  criterios_novos?: string[];
 };
 
 const toConflicts = (d: DetailsOut): ImpactConflict[] =>
@@ -83,6 +87,13 @@ const toSuggestion = (s: SuggestionOut): Suggestion => {
     alternativeText: details.alternativa_proposta ?? null,
     temporaryId: details.id_temporario ?? null,
     possibleDuplicates: (details.possiveis_duplicidades ?? []).map((d) => ({ code: d.codigo, similarity: d.similaridade })),
+    criteriaReview: s.tipo === 'revisao_criterios'
+      ? {
+          replaced: (details.criterios_substituidos ?? []).map((c) => c.criterio),
+          kept: (details.criterios_mantidos ?? []).map((c) => c.criterio),
+          added: details.criterios_novos ?? [],
+        }
+      : null,
     storyId: s.historia_id === null ? null : String(s.historia_id),
     storyCode: (s.historia_codigo as string | null | undefined) ?? null,
     type: s.tipo,

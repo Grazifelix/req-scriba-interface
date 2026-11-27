@@ -8,6 +8,7 @@ import {
   applyRewrite,
   approveStory,
   auditEvidence,
+  confirmCriterion,
   criteriaPayload,
   dismissRewrite,
   evaluateStory,
@@ -85,10 +86,12 @@ const CriterionCard: React.FC<{
   busy: boolean;
   audit?: AuditItem;
   onDelete: () => void;
-}> = ({ criterion, index, busy, audit, onDelete }) => {
+  onConfirm: () => void;
+  onRegenerate: () => void;
+}> = ({ criterion, index, busy, audit, onDelete, onConfirm, onRegenerate }) => {
   const structured = Boolean(criterion.when || criterion.then);
   return (
-    <div data-testid="criterion" className="bg-surface-container-low rounded-xl p-4 border border-surface-container flex items-start justify-between gap-4 group">
+    <div data-testid="criterion" className={`bg-surface-container-low rounded-xl p-4 border flex items-start justify-between gap-4 group ${criterion.outdated ? 'border-[#fcd34d]' : 'border-surface-container'}`}>
       <div className="flex items-start gap-3 min-w-0">
         <span className="w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs shrink-0 mt-0.5">{index + 1}</span>
         <div className="flex flex-col gap-1.5 min-w-0">
@@ -98,7 +101,22 @@ const CriterionCard: React.FC<{
               <span className="px-1.5 py-0.5 rounded bg-primary-fixed text-primary text-[10px] font-semibold" title="Gerado pela IA a partir das evidências da User Story">IA</span>
             )}
             {audit && <AuditBadge item={audit} />}
+            {criterion.outdated && (
+              <span data-testid="criterion-outdated" className="px-1.5 py-0.5 rounded bg-[#fef3c7] text-[#92400e] text-[10px] font-semibold" title={criterion.outdatedReason ?? ''}>
+                Desatualizado
+              </span>
+            )}
+            {criterion.storyVersion && <span className="text-[10px] text-outline">desde a v{criterion.storyVersion}</span>}
           </div>
+          {criterion.outdated && (
+            <div className="flex flex-col gap-1 bg-[#fffbeb] border border-[#fde68a] rounded-lg p-2">
+              <span className="text-[11px] text-[#92400e]">{criterion.outdatedReason}</span>
+              <div className="flex gap-2">
+                <button type="button" onClick={onConfirm} disabled={busy} className="text-[11px] font-semibold text-tertiary hover:underline disabled:opacity-50 cursor-pointer">Confirmar que continua válido</button>
+                <button type="button" onClick={onRegenerate} disabled={busy} className="text-[11px] font-semibold text-secondary hover:underline disabled:opacity-50 cursor-pointer">Regerar este critério</button>
+              </div>
+            </div>
+          )}
           {structured ? (
             <dl className="grid grid-cols-[auto_1fr] gap-x-2 gap-y-0.5 text-xs leading-relaxed">
               {GHERKIN_PARTS.map(([label, key]) =>
@@ -233,6 +251,7 @@ export const AvaliacaoQualidadeScreen: React.FC<AvaliacaoQualidadeScreenProps> =
 
   const isBusy = isSaving || isAnalyzing || isGeneratingCriteria || isAuditing;
   const isApproved = story.status === 'Aprovada';
+  const outdatedCount = story.criteria.filter((c) => c.outdated).length;
 
   const runChange = async (change: () => Promise<unknown>, successMessage?: string): Promise<boolean> => {
     setIsSaving(true);
@@ -276,6 +295,11 @@ export const AvaliacaoQualidadeScreen: React.FC<AvaliacaoQualidadeScreenProps> =
       createdCodes = await applyRewrite(storyId, rewrite ?? '');
     });
     if (!applied || cancelled) return;
+    if (updateSuggestion?.criteriaReview) {
+      setSuggestionIndex(0);
+      showToast('Novos critérios aplicados. Os anteriores ficam no histórico de versões.', 'checklist');
+      return;
+    }
     if (updateSuggestion?.isConfirmation) {
       setSuggestionIndex(0);
       showToast('Evidências da nova fonte vinculadas. O texto da User Story não mudou.', 'link');
@@ -316,6 +340,10 @@ export const AvaliacaoQualidadeScreen: React.FC<AvaliacaoQualidadeScreenProps> =
       sources: [],
       warnings: [],
       aiGenerated: false,
+      outdated: false,
+      outdatedReason: null,
+      storyVersion: null,
+      validatedVersion: null,
     };
     const saved = await runChange(
       () => updateStory(storyId, { criterios_aceitacao: criteriaPayload([...story.criteria, newRule]) }),
@@ -334,17 +362,23 @@ export const AvaliacaoQualidadeScreen: React.FC<AvaliacaoQualidadeScreenProps> =
       'Critério removido.'
     );
 
-  // Critérios gerados pela IA a partir das evidências; os atuais ficam na versão anterior da User Story.
-  const handleGenerateCriteria = async () => {
-    if (story.criteria.length > 0 && !window.confirm('Os critérios atuais serão substituídos pelos gerados pela IA. A versão anterior fica no histórico. Continuar?')) return;
+  // Critérios gerados pela IA a partir das evidências: os desatualizados (ou os escolhidos) são substituídos e os
+  // válidos mantidos; o que sai fica preservado no histórico. User Story aprovada: vira proposta para revisão.
+  const handleGenerateCriteria = async (criterionIds?: number[]) => {
+    const replacesValid = !criterionIds && outdatedCount === 0 && story.criteria.length > 0;
+    if (replacesValid && !window.confirm('Os critérios atuais serão substituídos pelos gerados pela IA. A versão anterior fica no histórico. Continuar?')) return;
     setIsGeneratingCriteria(true);
     showToast('Gerando critérios de aceitação a partir das evidências...', 'sync');
     try {
-      const result = await generateCriteria(storyId);
+      const result = await generateCriteria(storyId, criterionIds);
       await refreshStory();
+      if (result.proposta_criterios_id) {
+        showToast('User Story aprovada: os novos critérios viraram uma proposta para você revisar.', 'rule');
+        return;
+      }
       const total = result.criterios_aceitacao.length;
       showToast(
-        total > 0 ? `${total} critério(s) de aceitação gerado(s).` : 'As fontes não trazem base para critérios; veja as lacunas registradas.',
+        total > 0 ? `${total} critério(s) de aceitação vigente(s).` : 'As fontes não trazem base para critérios; veja as lacunas registradas.',
         total > 0 ? 'auto_awesome' : 'info'
       );
     } catch (e) {
@@ -368,6 +402,9 @@ export const AvaliacaoQualidadeScreen: React.FC<AvaliacaoQualidadeScreenProps> =
       setIsAuditing(false);
     }
   };
+
+  const handleConfirmCriterion = (criterionId: number) =>
+    runChange(() => confirmCriterion(storyId, criterionId), 'Critério confirmado para a versão atual.');
 
   const handleGenerateQuestions = async () => {
     setIsGeneratingQuestions(true);
@@ -560,14 +597,20 @@ export const AvaliacaoQualidadeScreen: React.FC<AvaliacaoQualidadeScreenProps> =
             </div>
             <div className="flex items-center gap-2 flex-wrap">
               <button
-                onClick={handleGenerateCriteria}
-                disabled={isBusy || isApproved}
+                onClick={() => handleGenerateCriteria()}
+                disabled={isBusy}
                 type="button"
-                title={isApproved ? 'User Stories aprovadas não recebem critérios da IA. Edite-os manualmente.' : 'Gera critérios a partir das evidências desta User Story'}
+                title={isApproved ? 'User Story aprovada: os critérios gerados viram uma proposta para revisão' : 'Gera critérios a partir das evidências desta User Story'}
                 className="px-3.5 py-1.5 rounded-lg bg-surface-container-low hover:bg-surface-container text-secondary text-xs font-semibold flex items-center gap-1 border border-surface-container transition-colors shadow-xs disabled:opacity-50 cursor-pointer"
               >
                 <span className="material-symbols-outlined text-[18px]">auto_awesome</span>
-                <span>{isGeneratingCriteria ? 'Gerando...' : story.criteria.length > 0 ? 'Regerar critérios' : 'Gerar critérios'}</span>
+                <span>
+                  {isGeneratingCriteria
+                    ? 'Gerando...'
+                    : outdatedCount > 0
+                      ? `Regerar desatualizados (${outdatedCount})`
+                      : story.criteria.length > 0 ? 'Regerar critérios' : 'Gerar critérios'}
+                </span>
               </button>
               <button onClick={() => setNewRuleModalOpen(true)} disabled={isBusy} type="button" className="px-3.5 py-1.5 rounded-lg bg-surface-container-low hover:bg-surface-container text-primary text-xs font-semibold flex items-center gap-1 border border-surface-container transition-colors shadow-xs disabled:opacity-50 cursor-pointer">
                 <span className="material-symbols-outlined text-[18px]">add</span>
@@ -598,6 +641,8 @@ export const AvaliacaoQualidadeScreen: React.FC<AvaliacaoQualidadeScreenProps> =
                 busy={isBusy}
                 audit={criterion.criterionId != null ? story.evidenceAudit?.criteria[criterion.criterionId] : undefined}
                 onDelete={() => handleDeleteRule(criterion.id)}
+                onConfirm={() => criterion.criterionId != null && handleConfirmCriterion(criterion.criterionId)}
+                onRegenerate={() => criterion.criterionId != null && handleGenerateCriteria([criterion.criterionId])}
               />
             ))}
           </div>
@@ -623,7 +668,7 @@ export const AvaliacaoQualidadeScreen: React.FC<AvaliacaoQualidadeScreenProps> =
             onPrevious: () => setSuggestionIndex(index - 1),
             onNext: () => setSuggestionIndex(index + 1),
           }}
-          applyLabel={updateSuggestion?.isConfirmation ? 'Vincular evidências' : undefined}
+          applyLabel={updateSuggestion?.isConfirmation ? 'Vincular evidências' : updateSuggestion?.criteriaReview ? 'Aplicar novos critérios' : undefined}
           onApply={handleApplySuggestion}
           onReject={handleRejectSuggestion}
           onCancel={updateSuggestion ? handleCancelSuggestion : undefined}

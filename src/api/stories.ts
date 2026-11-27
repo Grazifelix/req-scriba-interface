@@ -242,6 +242,10 @@ const toCriterion = (c: CriterionOut, excerpts: ReturnType<typeof excerptsByChun
   })),
   warnings: c.afirmacoes_sem_evidencia ?? [],
   aiGenerated: c.origem === 'ia',
+  outdated: c.situacao === 'desatualizado',
+  outdatedReason: c.motivo_situacao ?? null,
+  storyVersion: c.versao_historia ?? null,
+  validatedVersion: c.validado_na_versao ?? null,
 });
 
 const isCriteriaGap = (i: Record<string, unknown>) => i.elemento === CRITERIA_GAP;
@@ -303,10 +307,18 @@ export const applyRewrite = async (storyId: string, text: string): Promise<strin
 export const criteriaPayload = (criteria: TestCriterion[]) =>
   criteria.map((c) => ({ titulo: c.title || undefined, criterio: c.criterion }));
 
-// Etapa GERACAO_CRITERIOS_ACEITACAO para uma HU gravada: substitui os critérios numa nova versão
-// (a anterior fica no histórico). A API recusa HU aprovada (409) e devolve 502 se o LLM falhar.
-export const generateCriteria = (storyId: string) =>
-  apiRequest<StoryOut>(`/historias/${storyId}/criterios/gerar`, { method: 'POST' });
+// Etapa GERACAO_CRITERIOS_ACEITACAO: por padrão regera os critérios desatualizados (ou todos, se não houver);
+// `criterionIds` regera só os escolhidos. Os critérios que continuam valendo são mantidos. Numa história aprovada
+// vira uma proposta pendente (`proposta_criterios_id`). 502 se o LLM falhar.
+export const generateCriteria = (storyId: string, criterionIds?: number[]) =>
+  apiRequest<StoryOut & { proposta_criterios_id?: number | null }>(`/historias/${storyId}/criterios/gerar`, {
+    method: 'POST',
+    body: criterionIds?.length ? { criterio_ids: criterionIds } : undefined,
+  });
+
+// O analista confirma que o critério continua válido para a versão atual da história.
+export const confirmCriterion = (storyId: string, criterionId: number) =>
+  apiRequest<StoryOut>(`/historias/${storyId}/criterios/${criterionId}/confirmar`, { method: 'POST' });
 
 // Auditoria semântica das evidências (VALIDACAO_EVIDENCIAS): não altera a história; 502 se o LLM falhar.
 export const auditEvidence = (storyId: string) =>

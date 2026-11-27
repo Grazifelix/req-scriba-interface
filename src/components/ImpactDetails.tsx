@@ -10,17 +10,17 @@ const ORIGIN_LABELS: Record<string, string> = {
 export const ImpactDetails: React.FC<{ suggestion: Suggestion }> = ({ suggestion }) => {
   const {
     outdated, baseVersion, currentVersion, reclassifiedFrom, affectedComponents, affectedCriteria,
-    conflicts, alternativeText, possibleDuplicates, temporaryId, isConfirmation,
+    conflicts, alternativeText, possibleDuplicates, temporaryId, isConfirmation, criteriaReview,
   } = suggestion;
   const hasContent = outdated || reclassifiedFrom || affectedComponents.length || affectedCriteria.length
-    || conflicts.length || alternativeText || possibleDuplicates.length || temporaryId || isConfirmation;
+    || conflicts.length || alternativeText || possibleDuplicates.length || temporaryId || isConfirmation || criteriaReview;
   if (!hasContent) return null;
 
   return (
     <section data-testid="impact-details" className="bg-white rounded-xl p-6 shadow-xs border border-surface-container flex flex-col gap-3">
       <div className="flex flex-wrap items-center gap-2 pb-2 border-b border-surface-container">
         <span className="material-symbols-outlined text-[20px] text-primary">difference</span>
-        <h2 className="text-base font-bold text-on-surface">Impacto da nova fonte</h2>
+        <h2 className="text-base font-bold text-on-surface">{criteriaReview ? 'Proposta de critérios' : 'Impacto da nova fonte'}</h2>
         <span className="px-2 py-0.5 rounded-full bg-primary-fixed text-primary text-[11px] font-semibold">{suggestion.typeLabel}</span>
         {temporaryId && <span className="px-2 py-0.5 rounded bg-surface-container-high text-on-surface text-[11px] font-mono font-semibold" title="Id temporário: o código definitivo (US-…) é atribuído ao aprovar">{temporaryId}</span>}
       </div>
@@ -82,6 +82,15 @@ export const ImpactDetails: React.FC<{ suggestion: Suggestion }> = ({ suggestion
 
       {alternativeText && (
         <p className="text-xs text-on-surface-variant"><span className="font-semibold">Alternativa sugerida pela IA (não aplicada):</span> {alternativeText}</p>
+      )}
+
+      {criteriaReview && (
+        <div data-testid="criteria-review" className="flex flex-col gap-1 text-[11px]">
+          <span className="text-xs text-on-surface-variant">A User Story está aprovada: os critérios gerados pela IA só valem se você aplicar esta proposta.</span>
+          {criteriaReview.added.map((c, i) => <span key={`n${i}`} className="text-tertiary">+ Novo: {c}</span>)}
+          {criteriaReview.replaced.map((c, i) => <span key={`s${i}`} className="text-error">− Substituído: {c}</span>)}
+          {criteriaReview.kept.map((c, i) => <span key={`m${i}`} className="text-on-surface-variant">= Mantido: {c}</span>)}
+        </div>
       )}
 
       {possibleDuplicates.length > 0 && (

@@ -80,6 +80,12 @@ export interface TestCriterion {
   /** Sinalizações da validação: sem evidência, citação não encontrada, referência inexistente. */
   warnings: string[];
   aiGenerated: boolean;
+  /** A história mudou depois do critério: ele não vale automaticamente até ser confirmado ou regerado. */
+  outdated: boolean;
+  outdatedReason: string | null;
+  /** Versão da história em que o critério entrou e a última em que foi validado. */
+  storyVersion: number | null;
+  validatedVersion: number | null;
 }
 
 export type HeuristicCategory = '1. Estrutura do Texto' | '2. Sentido e Negócio' | '3. Prática e Execução';
@@ -244,6 +250,8 @@ export interface Suggestion {
   alternativeText: string | null;
   temporaryId: string | null;
   possibleDuplicates: Array<{ code: string; similarity: number }>;
+  /** Proposta de revisão de critérios (história aprovada): substituídos, mantidos e novos. */
+  criteriaReview: { replaced: string[]; kept: string[]; added: string[] } | null;
   storyId: string | null;
   storyCode: string | null;
   type: string;
