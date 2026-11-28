@@ -49,11 +49,14 @@ const sourcesOf = (item: AuditItem): string[] => [
 ];
 
 // Selo do resultado da auditoria; o título explica quando foi o código (não o modelo) que decidiu.
-export const AuditBadge: React.FC<{ item: AuditItem }> = ({ item }) => {
+// `plain`: sem fundo nem preenchimento, só ícone e texto na cor do resultado.
+export const AuditBadge: React.FC<{ item: AuditItem; plain?: boolean }> = ({ item, plain = false }) => {
   const style = RESULT_STYLE[item.result];
   const title = item.byModel ? 'Avaliado pela IA a partir dos trechos vinculados' : 'Decidido pelo sistema: nenhum trecho vinculado ou item não avaliado';
   return (
-    <span data-testid="audit-badge" title={title} className={`px-1.5 py-0.5 rounded text-[10px] font-semibold inline-flex items-center gap-0.5 shrink-0 ${style.className}`}>
+    <span data-testid="audit-badge" title={title} className={`text-[10px] font-semibold inline-flex items-center gap-0.5 shrink-0 ${
+        plain ? style.className.split(' ').filter((c) => !c.startsWith('bg-')).join(' ') : `px-1.5 py-0.5 rounded ${style.className}`
+      }`}>
       <span className="material-symbols-outlined text-[12px]">{style.icon}</span>
       {style.label}
     </span>
@@ -90,7 +93,7 @@ const ClaimRow: React.FC<{ label: string; connector: string; text: string; item:
           </span>
           <p className="text-xs text-on-surface leading-relaxed">{text || <span className="italic text-outline">Não informado</span>}</p>
         </div>
-        <AuditBadge item={item} />
+        <AuditBadge item={item} plain />
       </div>
 
       {hasIssue && (item.problems.length > 0 || item.correction) && (
@@ -163,22 +166,11 @@ export const EvidenceAuditPanel: React.FC<EvidenceAuditPanelProps> = ({ audit, i
         </div>
         <button onClick={onAudit} disabled={busy} type="button" className="px-3.5 py-1.5 rounded-lg bg-surface-container-low hover:bg-surface-container text-secondary text-xs font-semibold flex items-center gap-1 border border-surface-container transition-colors shadow-xs disabled:opacity-50 cursor-pointer">
           <span className={`material-symbols-outlined text-[18px] ${auditing ? 'animate-spin' : ''}`}>{auditing ? 'progress_activity' : 'policy'}</span>
-          <span>{auditing ? 'Auditando...' : audit ? 'Auditar novamente' : 'Auditar evidências'}</span>
+          <span>{auditing ? 'Auditando...' : 'Auditar'}</span>
         </button>
       </div>
 
       <div className="flex flex-wrap items-center gap-2 text-[11px]">
-        <span
-          title="Verificação estrutural (feita pelo sistema): referências, ids e vínculos"
-          className={`px-2 py-0.5 rounded font-semibold inline-flex items-center gap-1 ${
-            errors.length > 0 ? RESULT_STYLE.INCOMPATIVEL.className : warnings.length > 0 ? RESULT_STYLE.PARCIALMENTE_COMPATIVEL.className : RESULT_STYLE.COMPATIVEL.className
-          }`}
-        >
-          <span className="material-symbols-outlined text-[13px]">{issues.length === 0 ? 'link' : 'link_off'}</span>
-          {issues.length === 0
-            ? 'Vínculos íntegros'
-            : [errors.length > 0 && `${errors.length} erro(s)`, warnings.length > 0 && `${warnings.length} aviso(s)`].filter(Boolean).join(' · ') + ' estrutural(is)'}
-        </span>
         {audit && (
           <span className="text-on-surface-variant inline-flex items-center gap-1">
             <span className="material-symbols-outlined text-[13px]">auto_awesome</span>
@@ -209,7 +201,7 @@ export const EvidenceAuditPanel: React.FC<EvidenceAuditPanelProps> = ({ audit, i
 
       {!audit ? (
         <p className="text-xs text-on-surface-variant text-center py-3">
-          Esta User Story ainda não foi auditada. Use "Auditar evidências" para conferir se as fontes sustentam cada afirmação.
+          Esta User Story ainda não foi auditada. Use "Auditar" para conferir se as fontes sustentam cada afirmação.
         </p>
       ) : (
         <>

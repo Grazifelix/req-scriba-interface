@@ -139,13 +139,13 @@ const CriterionItem: React.FC<{
   const auditNotes = audit && audit.result !== 'COMPATIVEL' ? audit : null;
 
   return (
-    <li data-testid="criterion" className={`bg-surface-container-low rounded-xl p-4 border border-surface-container border-l-4 flex flex-col gap-2 ${border}`}>
+    <li data-testid="criterion" className={`bg-[#f8f9fa] rounded-xl p-4 border border-[#d1d5db] border-l-4 flex flex-col gap-2 ${border}`}>
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-2 flex-wrap min-w-0">
           <span className="w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs shrink-0">{index + 1}</span>
           <span className="text-xs font-bold text-on-surface">{criterion.title}</span>
           {criterion.aiGenerated && (
-            <span className="px-1.5 py-0.5 rounded bg-primary-fixed text-primary text-[10px] font-semibold inline-flex items-center gap-0.5" title="Gerado pela IA a partir das evidências da User Story">
+            <span className="text-primary text-[10px] font-semibold inline-flex items-center gap-0.5" title="Gerado pela IA a partir das evidências da User Story">
               <span className="material-symbols-outlined text-[12px]">auto_awesome</span>
               Sugestão da IA
             </span>

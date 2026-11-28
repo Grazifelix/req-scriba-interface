@@ -3,7 +3,6 @@ import { useIsMutating, useMutation, useQueryClient } from '@tanstack/react-quer
 import { errorMessage } from '../api/client.ts';
 import { useEvaluatingStoryIds } from '../api/jobs.ts';
 import { PROJECTS_QUERY_KEY } from '../api/projects.ts';
-import { generateQuestions, questionsKey } from '../api/questions.ts';
 import {
   applyRewrite,
   approveStory,
@@ -103,7 +102,6 @@ export const AvaliacaoQualidadeScreen: React.FC<AvaliacaoQualidadeScreenProps> =
   const [newRuleTitle, setNewRuleTitle] = useState('');
   const [newRuleCriterion, setNewRuleCriterion] = useState('');
   const [isSaving, setIsSaving] = useState(false);
-  const [isGeneratingQuestions, setIsGeneratingQuestions] = useState(false);
   const [isGeneratingCriteria, setIsGeneratingCriteria] = useState(false);
   const [isAuditing, setIsAuditing] = useState(false);
   const [comparedVersion, setComparedVersion] = useState<number | null>(null);
@@ -314,20 +312,6 @@ export const AvaliacaoQualidadeScreen: React.FC<AvaliacaoQualidadeScreenProps> =
   const handleConfirmCriterion = (criterionId: number) =>
     runChange(() => confirmCriterion(storyId, criterionId), 'Critério confirmado para a versão atual.');
 
-  const handleGenerateQuestions = async () => {
-    setIsGeneratingQuestions(true);
-    showToast('Gerando perguntas a partir dos defeitos encontrados...', 'sync');
-    try {
-      const { total, limitations } = await generateQuestions(storyId);
-      await queryClient.invalidateQueries({ queryKey: questionsKey(project.id) });
-      showToast(total > 0 ? `${total} pergunta(s) criada(s) em Follow-up.` : limitations[0] ?? 'Nenhuma pergunta foi gerada.', total > 0 ? 'auto_awesome' : 'info');
-    } catch (e) {
-      showToast(errorMessage(e), 'error');
-    } finally {
-      setIsGeneratingQuestions(false);
-    }
-  };
-
   const metCount = story.heuristics.filter((h) => h.status === 'Atendido').length;
   const attentionCount = story.heuristics.length - metCount;
   const attentionMessages = [...story.missingInfo, ...story.unsupportedClaims.map((c) => `Afirmação sem evidência: ${c}`)];
@@ -477,9 +461,9 @@ export const AvaliacaoQualidadeScreen: React.FC<AvaliacaoQualidadeScreenProps> =
               <span className="material-symbols-outlined text-[18px]">auto_awesome</span>
               <span>{isAnalyzing ? 'Analisando...' : 'Analisar a qualidade'}</span>
             </button>
-            <button onClick={handleGenerateQuestions} disabled={isBusy || isGeneratingQuestions} type="button" className="px-3.5 py-1.5 rounded-lg bg-surface-container-low hover:bg-surface-container text-primary text-xs font-semibold border border-surface-container transition-colors shadow-xs flex items-center gap-1.5 disabled:opacity-50 cursor-pointer">
-              <span className="material-symbols-outlined text-[18px]">quiz</span>
-              <span>{isGeneratingQuestions ? 'Gerando...' : 'Gerar Perguntas'}</span>
+            <button onClick={handleAudit} disabled={isBusy} type="button" className="px-3.5 py-1.5 rounded-lg bg-surface-container-low hover:bg-surface-container text-secondary text-xs font-semibold border border-surface-container transition-colors shadow-xs flex items-center gap-1.5 disabled:opacity-50 cursor-pointer">
+              <span className={`material-symbols-outlined text-[18px] ${isAuditing ? 'animate-spin' : ''}`}>{isAuditing ? 'progress_activity' : 'policy'}</span>
+              <span>{isAuditing ? 'Auditando...' : 'Auditar'}</span>
             </button>
             <button onClick={() => runChange(() => rejectStory(storyId), 'User Story desaprovada.')} disabled={isBusy} type="button" className="px-3.5 py-1.5 rounded-lg bg-surface-container-low hover:bg-surface-container text-error text-xs font-semibold border border-surface-container transition-colors shadow-xs flex items-center gap-1.5 disabled:opacity-50 cursor-pointer">
               <span className="material-symbols-outlined text-[18px]">thumb_down</span>
