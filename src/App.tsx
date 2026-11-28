@@ -240,10 +240,6 @@ export default function App() {
               Visão Geral
             </button>
             <span>•</span>
-            <button onClick={() => handleOpenProjectScreen('follow-up')} className="hover:text-primary transition-colors cursor-pointer">
-              Follow-up
-            </button>
-            <span>•</span>
             <button onClick={() => setCurrentScreen('perfil')} className="hover:text-primary transition-colors cursor-pointer font-semibold text-primary">
               Seu nome
             </button>

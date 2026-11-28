@@ -11,7 +11,7 @@ export const ProjectNav: React.FC<ProjectNavProps> = ({ currentScreen, onNavigat
     { id: 'visao-geral' as ScreenType, label: 'Visão Geral', icon: 'dashboard' },
     { id: 'projeto-ingestao' as ScreenType, label: 'Ingestão de dados', icon: 'upload_file' },
     { id: 'projeto-fontes' as ScreenType, label: 'Fontes de Dados', icon: 'database' },
-    { id: 'follow-up' as ScreenType, label: 'Perguntas de Follow-up', icon: 'help_outline' },
+    // "Perguntas de Follow-up" fica fora da navegação enquanto está em desenvolvimento (ver README).
   ];
 
   return (

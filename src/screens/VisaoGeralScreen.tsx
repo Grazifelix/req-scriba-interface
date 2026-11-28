@@ -124,6 +124,29 @@ export const VisaoGeralScreen: React.FC<VisaoGeralScreenProps> = ({
       </section>
 
       <section className="flex flex-col gap-4 w-full">
+        {/* Ações em lote sobre o backlog: ainda sem funcionalidade (botões desabilitados). */}
+        <div className="bg-white rounded-xl p-4 shadow-xs border border-surface-container flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
+              <span className="material-symbols-outlined text-[20px]">rule_settings</span>
+            </div>
+            <div className="flex flex-col">
+              <span className="text-xs font-bold text-on-surface">Ações da Tarefa</span>
+              <span className="text-xs text-on-surface-variant">Analise a qualidade ou audite as evidências de todas as User Stories do backlog</span>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <button type="button" disabled title="Em desenvolvimento" className="px-3.5 py-1.5 rounded-lg bg-surface-container-low hover:bg-surface-container text-secondary text-xs font-semibold border border-surface-container transition-colors shadow-xs flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer">
+              <span className="material-symbols-outlined text-[18px]">auto_awesome</span>
+              <span>Analisar todas</span>
+            </button>
+            <button type="button" disabled title="Em desenvolvimento" className="px-3.5 py-1.5 rounded-lg bg-surface-container-low hover:bg-surface-container text-secondary text-xs font-semibold border border-surface-container transition-colors shadow-xs flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer">
+              <span className="material-symbols-outlined text-[18px]">policy</span>
+              <span>Auditar todas</span>
+            </button>
+          </div>
+        </div>
+
         <div className="p-5 rounded-xl bg-white border border-outline-variant/30 shadow-xs flex flex-col gap-4">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-3 border-b border-outline-variant/20">
             <div className="flex items-center gap-3">
@@ -265,10 +288,6 @@ export const VisaoGeralScreen: React.FC<VisaoGeralScreenProps> = ({
 
           <div className="flex items-center justify-between pt-2 text-on-surface-variant text-xs border-t border-outline-variant/20">
             <span>Mostrando {filteredStories.length} de {totalCount} User Stories</span>
-            <button onClick={() => onNavigate('follow-up')} className="text-primary hover:underline font-semibold flex items-center gap-1 cursor-pointer">
-              <span className="material-symbols-outlined text-[16px]">help_outline</span>
-              <span>Ver Perguntas de Follow-up ({stories.filter((s) => s.hasMissingInfo).length} histórias com lacunas)</span>
-            </button>
           </div>
         </div>
       </section>

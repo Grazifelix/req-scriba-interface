@@ -537,11 +537,6 @@ export const AvaliacaoQualidadeScreen: React.FC<AvaliacaoQualidadeScreenProps> =
                 </ul>
               </div>
             </div>
-            <button onClick={() => onNavigate('follow-up')} className="shrink-0 inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#d97706] hover:bg-[#b45309] text-white text-xs font-semibold transition-colors shadow-xs cursor-pointer">
-              <span className="material-symbols-outlined text-[18px]">quiz</span>
-              <span>Resolver em Perguntas de Follow-up</span>
-              <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
-            </button>
           </div>
         )}
 

@@ -38,11 +38,20 @@ Depois, abra `http://localhost:3000`.
 - **API em outro endereço:** copie `.env.example` para `.env.local` e ajuste `VITE_API_URL`. Informe só a origem, sem `/api/v1`, e reinicie o `npm run dev`.
 - **Erro de CORS:** a origem do frontend precisa estar em `REQSCRIBA_CORS_ORIGINS` na API. O padrão já libera `http://localhost:3000`.
 
-## O que depende da API
+## Em desenvolvimento
 
-Um recurso já está na interface, mas a API ainda não o oferece. Até lá, a tela mostra a mensagem de erro:
+### Perguntas de Follow-up
 
-- **Descartar pergunta:** a tela avisa que a função ainda não está disponível.
+A tela de Perguntas de Follow-up ainda está em desenvolvimento e não aparece na interface. Foram retirados todos os caminhos até ela:
+
+- a aba "Perguntas de Follow-up" na navegação do projeto;
+- o link "Follow-up" no rodapé;
+- o botão "Ver Perguntas de Follow-up" na Visão Geral;
+- o botão "Resolver em Perguntas de Follow-up" no alerta de falta de informação da User Story.
+
+O código da tela continua em `src/screens/FollowUpScreen.tsx`, e a rota `follow-up` continua registrada em `src/App.tsx`. A API já gera, lista e responde perguntas (US-10 a US-12). Ainda falta, na API, descartar uma pergunta: a tela avisa que essa função não está disponível.
+
+Para reativar a tela, volte a aba em `src/components/ProjectNav.tsx` e os botões nas telas citadas acima.
 
 ## Tipos da API
 
