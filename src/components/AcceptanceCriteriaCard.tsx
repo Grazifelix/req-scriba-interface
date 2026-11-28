@@ -137,6 +137,9 @@ const CriterionItem: React.FC<{
   const border = criterion.outdated ? 'border-l-[#d97706]' : audit ? RESULT_BORDER[audit.result] : 'border-l-outline-variant';
   const sourcesId = `criterion-${criterion.id}-sources`;
   const auditNotes = audit && audit.result !== 'COMPATIVEL' ? audit : null;
+  const problems = auditNotes?.problems ?? [];
+  const correction = auditNotes?.correction;
+  const hasNotes = problems.length > 0 || Boolean(correction) || criterion.warnings.length > 0;
 
   return (
     <li data-testid="criterion" className={`bg-[#f8f9fa] rounded-xl p-4 border border-[#d1d5db] border-l-4 flex flex-col gap-2 ${border}`}>
@@ -201,40 +204,39 @@ const CriterionItem: React.FC<{
         <p className="text-xs text-on-surface leading-relaxed whitespace-pre-line">{criterion.criterion}</p>
       )}
 
-      {auditNotes && (auditNotes.problems.length > 0 || auditNotes.correction) && (
-        <ul className="flex flex-col gap-0.5 text-[11px] text-on-surface-variant">
-          {auditNotes.problems.map((problem, i) => <li key={i}>• {problem}</li>)}
-          {auditNotes.correction && <li className="italic">Correção sugerida (não aplicada): {auditNotes.correction}</li>}
-        </ul>
-      )}
-
-      {criterion.warnings.length > 0 && (
-        <ul data-testid="criterion-warnings" className="flex flex-col gap-0.5">
-          {criterion.warnings.map((warning, i) => (
-            <li key={i} className="text-[11px] text-[#92400e] flex items-start gap-1">
-              <span className="material-symbols-outlined text-[13px] mt-px">warning</span>
-              <span>{warning}</span>
-            </li>
-          ))}
-        </ul>
-      )}
-
-      {sources.length > 0 && (
+      {(sources.length > 0 || hasNotes) && (
         <div className="flex flex-col gap-2 pt-0.5">
           <button
             type="button"
             onClick={() => setShowSources((v) => !v)}
             aria-expanded={showSources}
             aria-controls={sourcesId}
-            className="self-start text-[11px] text-primary font-semibold flex items-center gap-0.5 hover:underline cursor-pointer"
+            className="self-start text-[11px] text-primary font-semibold flex items-center gap-0.5 hover:text-[#002d80] transition-colors cursor-pointer"
           >
             <span className="material-symbols-outlined text-[16px]">{showSources ? 'expand_less' : 'expand_more'}</span>
-            {showSources ? 'Ocultar' : 'Ver'} {sources.length} trecho(s) das fontes
+            {showSources ? 'Ocultar' : 'Ver'} {sources.length > 0 ? `${sources.length} trecho(s) das fontes e auditoria` : 'auditoria'}
           </button>
           {showSources && (
-            <ul id={sourcesId} data-testid="criterion-sources" className="flex flex-col gap-1.5">
-              {sources.map((s) => <SourceItem key={s.chunkId} source={s} />)}
-            </ul>
+            <div id={sourcesId} className="flex flex-col gap-2">
+              {hasNotes && (
+                <div data-testid="criterion-audit-notes" className="p-3 bg-[#fffbeb] border border-[#fcd34d] rounded-lg flex items-start gap-2">
+                  <span className="material-symbols-outlined text-[18px] text-[#d97706]">info</span>
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-xs font-bold text-[#78350f]">O que a auditoria apontou nas fontes</span>
+                    <ul data-testid="criterion-warnings" className="text-xs text-[#92400e] leading-relaxed list-disc pl-4">
+                      {problems.map((problem, i) => <li key={`p${i}`}>{problem}</li>)}
+                      {criterion.warnings.map((warning, i) => <li key={`w${i}`}>{warning}</li>)}
+                      {correction && <li className="italic">Correção sugerida (não aplicada): {correction}</li>}
+                    </ul>
+                  </div>
+                </div>
+              )}
+              {sources.length > 0 && (
+                <ul data-testid="criterion-sources" className="flex flex-col gap-1.5">
+                  {sources.map((s) => <SourceItem key={s.chunkId} source={s} />)}
+                </ul>
+              )}
+            </div>
           )}
         </div>
       )}

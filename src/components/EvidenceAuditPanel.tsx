@@ -204,14 +204,17 @@ export const EvidenceAuditPanel: React.FC<EvidenceAuditPanelProps> = ({ audit, i
           </div>
 
           {issues.length > 0 && (
-            <ul data-testid="structural-issues" className="flex flex-col gap-0.5 p-3 rounded-lg bg-surface-container-low border border-surface-container">
-              {[...errors, ...warnings].map((issue, i) => (
-                <li key={i} className={`text-[11px] flex items-start gap-1 ${issue.severity === 'erro' ? 'text-error' : 'text-[#92400e]'}`}>
-                  <span className="material-symbols-outlined text-[13px] mt-px">{issue.severity === 'erro' ? 'error' : 'warning'}</span>
-                  <span>{issue.message}</span>
-                </li>
-              ))}
-            </ul>
+            <div className="p-3 bg-[#fffbeb] border border-[#fcd34d] rounded-lg flex items-start gap-2">
+              <span className="material-symbols-outlined text-[18px] text-[#d97706]">info</span>
+              <div className="flex flex-col gap-0.5">
+                <span className="text-xs font-bold text-[#78350f]">Alertas da validação das evidências</span>
+                <ul data-testid="structural-issues" className="text-xs text-[#92400e] leading-relaxed list-disc pl-4">
+                  {[...errors, ...warnings].map((issue, i) => (
+                    <li key={i} className={issue.severity === 'erro' ? 'text-error' : undefined}>{issue.message}</li>
+                  ))}
+                </ul>
+              </div>
+            </div>
           )}
 
           {!audit ? (

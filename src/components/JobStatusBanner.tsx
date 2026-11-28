@@ -36,7 +36,7 @@ const finishedMessage = (job: Job): string => {
       .filter(([, n]) => n > 0)
       .map(([category, n]) => `${n} ${(CATEGORY_LABELS[category] ?? category).toLowerCase()}`);
     const failures = job.failureCount > 0 ? ` ${job.failureCount} lote(s) falharam.` : '';
-    return `${job.typeLabel} concluída: ${job.createdCount} proposta(s) para revisar (${parts.join(', ')}). Nada muda sem a sua aprovação.${failures}`;
+    return `${job.typeLabel} concluída: ${job.createdCount} proposta(s) para revisar (${parts.join(', ')}).${failures}`;
   }
   const noun = job.isAnalysis ? 'sugestão(ões)' : 'história(s)';
   const failures = job.failureCount > 0 ? ` ${job.failureCount} etapa(s) falharam.` : '';
