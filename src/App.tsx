@@ -177,6 +177,7 @@ export default function App() {
             onSelectStory={handleOpenStory}
             onOpenRequirement={handleOpenRequirement}
             onNavigate={setCurrentScreen}
+            showToast={triggerToast}
           />
         )}
 

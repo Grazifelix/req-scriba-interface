@@ -53,6 +53,13 @@ O código da tela continua em `src/screens/FollowUpScreen.tsx`, e a rota `follow
 
 Para reativar a tela, volte a aba em `src/components/ProjectNav.tsx` e os botões nas telas citadas acima.
 
+### Ações em lote na Visão Geral
+
+O card "Ações da Tarefa", acima do Backlog, tem dois botões:
+
+- **Auditar todas:** já funciona. Inicia o job `auditoria_evidencias` (`POST /projetos/{id}/auditoria-evidencias`), que audita as evidências de todas as User Stories ativas, menos as desaprovadas. O andamento e o resultado aparecem no aviso do topo da tela. O botão fica bloqueado enquanto houver uma auditoria em lote em andamento.
+- **Analisar todas:** ainda está em desenvolvimento e fica desabilitado.
+
 ## Tipos da API
 
 `src/api/schema.d.ts` é gerado a partir do contrato da API. Para atualizar, com a API rodando:

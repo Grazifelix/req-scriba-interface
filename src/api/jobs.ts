@@ -132,3 +132,7 @@ export const startAnalysis = (qc: QueryClient, projectId: string, audioIds: stri
 
 export const startQualityEvaluation = (qc: QueryClient, projectId: string, storyIds: number[]) =>
   startJob(qc, projectId, `/projetos/${projectId}/historias/avaliar`, { historia_ids: storyIds });
+
+// Auditoria semântica das evidências em lote; corpo vazio = todas as histórias ativas (exceto desaprovadas).
+export const startEvidenceAudit = (qc: QueryClient, projectId: string) =>
+  startJob(qc, projectId, `/projetos/${projectId}/auditoria-evidencias`, {});

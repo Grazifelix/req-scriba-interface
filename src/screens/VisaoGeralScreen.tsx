@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { errorMessage } from '../api/client.ts';
-import { useEvaluatingStoryIds } from '../api/jobs.ts';
+import { isJobActive, startEvidenceAudit, useEvaluatingStoryIds, useJobs } from '../api/jobs.ts';
 import { formatScore, getDismissedRewrites, pendingRewrite, useStories } from '../api/stories.ts';
 import { usePendingSuggestions } from '../api/suggestions.ts';
 import { StoryText } from '../components/StoryText.tsx';
@@ -12,6 +13,7 @@ interface VisaoGeralScreenProps {
   onSelectStory: (storyId: string) => void;
   onOpenRequirement: (suggestionId: string) => void;
   onNavigate: (screen: ScreenType) => void;
+  showToast: (msg: string, icon?: string) => void;
 }
 
 const STATUS_FILTERS: Array<{ status: StoryStatus; icon: string }> = [
@@ -40,7 +42,11 @@ export const VisaoGeralScreen: React.FC<VisaoGeralScreenProps> = ({
   onSelectStory,
   onOpenRequirement,
   onNavigate,
+  showToast,
 }) => {
+  const queryClient = useQueryClient();
+  const { data: jobs = [] } = useJobs(project.id);
+  const [isStartingAudit, setIsStartingAudit] = useState(false);
   const [activeFilter, setActiveFilter] = useState<'todos' | StoryStatus>('todos');
   const [searchQuery, setSearchQuery] = useState('');
   const { data: stories = [], isPending, error } = useStories(project.id);
@@ -61,6 +67,20 @@ export const VisaoGeralScreen: React.FC<VisaoGeralScreenProps> = ({
   const approvedCount = countByStatus('Aprovada');
   const pendingCount = countByStatus('Em revisão') + countByStatus('Falta Informação');
   const hasSources = project.audiosCount + project.docsCount > 0;
+
+  // A API não impede dois lotes ao mesmo tempo: o botão fica bloqueado enquanto houver um job de auditoria ativo.
+  const auditableCount = totalCount - countByStatus('Desaprovada');
+  const isAuditing = isStartingAudit || jobs.some((j) => j.type === 'auditoria_evidencias' && isJobActive(j));
+  const handleAuditAll = async () => {
+    setIsStartingAudit(true);
+    try {
+      await startEvidenceAudit(queryClient, project.id);
+    } catch (e) {
+      showToast(errorMessage(e), 'error');
+    } finally {
+      setIsStartingAudit(false);
+    }
+  };
 
   const search = searchQuery.toLowerCase();
   const filteredStories = stories.filter((s) => {
@@ -124,7 +144,7 @@ export const VisaoGeralScreen: React.FC<VisaoGeralScreenProps> = ({
       </section>
 
       <section className="flex flex-col gap-4 w-full">
-        {/* Ações em lote sobre o backlog: ainda sem funcionalidade (botões desabilitados). */}
+        {/* Ações em lote sobre o backlog. "Analisar todas" ainda está em desenvolvimento (desabilitado). */}
         <div className="bg-white rounded-xl p-4 shadow-xs border border-surface-container flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
@@ -140,9 +160,15 @@ export const VisaoGeralScreen: React.FC<VisaoGeralScreenProps> = ({
               <span className="material-symbols-outlined text-[18px]">auto_awesome</span>
               <span>Analisar todas</span>
             </button>
-            <button type="button" disabled title="Em desenvolvimento" className="px-3.5 py-1.5 rounded-lg bg-surface-container-low hover:bg-surface-container text-secondary text-xs font-semibold border border-surface-container transition-colors shadow-xs flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer">
-              <span className="material-symbols-outlined text-[18px]">policy</span>
-              <span>Auditar todas</span>
+            <button
+              type="button"
+              onClick={handleAuditAll}
+              disabled={isAuditing || auditableCount === 0}
+              title={auditableCount > 0 ? `Audita as evidências de ${auditableCount} User Story(ies); roda em segundo plano` : 'Nenhuma User Story para auditar'}
+              className="px-3.5 py-1.5 rounded-lg bg-surface-container-low hover:bg-surface-container text-secondary text-xs font-semibold border border-surface-container transition-colors shadow-xs flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+            >
+              <span className={`material-symbols-outlined text-[18px] ${isAuditing ? 'animate-spin' : ''}`}>{isAuditing ? 'progress_activity' : 'policy'}</span>
+              <span>{isAuditing ? 'Auditando...' : 'Auditar todas'}</span>
             </button>
           </div>
         </div>
