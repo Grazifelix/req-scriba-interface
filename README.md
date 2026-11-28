@@ -57,8 +57,12 @@ Para reativar a tela, volte a aba em `src/components/ProjectNav.tsx` e os botõe
 
 O card "Ações da Tarefa", acima do Backlog, tem dois botões:
 
-- **Auditar todas:** já funciona. Inicia o job `auditoria_evidencias` (`POST /projetos/{id}/auditoria-evidencias`), que audita as evidências de todas as User Stories ativas, menos as desaprovadas. O andamento e o resultado aparecem no aviso do topo da tela. O botão fica bloqueado enquanto houver uma auditoria em lote em andamento.
-- **Analisar todas:** ainda está em desenvolvimento e fica desabilitado.
+- **Auditar todas:** já funciona. Inicia o job `auditoria_evidencias` (`POST /projetos/{id}/auditoria-evidencias`), que audita as evidências de todas as User Stories ativas, menos as desaprovadas. O andamento e o resultado aparecem no aviso do topo da tela. 
+- **Analisar todas:** inicia o job `avaliacao_qualidade` (`POST /projetos/{id}/historias/avaliar` com a lista vazia), que avalia pelos 13 critérios QUS todas as User Stories ativas, menos as desaprovadas. Se uma história falhar, as demais continuam.
+
+O andamento e o resultado dos dois aparecem no aviso do topo da tela. Enquanto um lote roda, os dois botões ficam bloqueados, para não disputarem o LLM local. A API não impede lotes simultâneos.
+
+Limitação: o carregamento de cada User Story no Backlog só aparece para as que ainda não têm nota. Numa reavaliação, a nota das que já tinham muda só quando a história é avaliada; o progresso geral fica no aviso do topo.
 
 ## Tipos da API
 
