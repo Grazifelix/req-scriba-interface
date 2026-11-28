@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { AuditItem, AuditResult, EvidenceAudit, StoryComponent, StructuralIssue } from '../types.ts';
 
 const RESULT_STYLE: Record<AuditResult, { label: string; className: string; icon: string }> = {
@@ -49,14 +49,20 @@ const sourcesOf = (item: AuditItem): string[] => [
 ];
 
 // Selo do resultado da auditoria; o título explica quando foi o código (não o modelo) que decidiu.
-// `plain`: sem fundo nem preenchimento, só ícone e texto na cor do resultado.
-export const AuditBadge: React.FC<{ item: AuditItem; plain?: boolean }> = ({ item, plain = false }) => {
+// Variantes: `filled` (fundo colorido), `plain` (só ícone e texto) e `outline` (sem fundo, borda fina na cor do resultado).
+type BadgeVariant = 'filled' | 'plain' | 'outline';
+const withoutBackground = (className: string) => className.split(' ').filter((c) => !c.startsWith('bg-')).join(' ');
+const BADGE_VARIANT: Record<BadgeVariant, (className: string) => string> = {
+  filled: (c) => `px-1.5 py-0.5 rounded ${c}`,
+  plain: withoutBackground,
+  outline: (c) => `px-1.5 py-0.5 rounded border border-current/40 ${withoutBackground(c)}`,
+};
+
+export const AuditBadge: React.FC<{ item: AuditItem; variant?: BadgeVariant }> = ({ item, variant = 'filled' }) => {
   const style = RESULT_STYLE[item.result];
   const title = item.byModel ? 'Avaliado pela IA a partir dos trechos vinculados' : 'Decidido pelo sistema: nenhum trecho vinculado ou item não avaliado';
   return (
-    <span data-testid="audit-badge" title={title} className={`text-[10px] font-semibold inline-flex items-center gap-0.5 shrink-0 ${
-        plain ? style.className.split(' ').filter((c) => !c.startsWith('bg-')).join(' ') : `px-1.5 py-0.5 rounded ${style.className}`
-      }`}>
+    <span data-testid="audit-badge" title={title} className={`text-[10px] font-semibold inline-flex items-center gap-0.5 shrink-0 ${BADGE_VARIANT[variant](style.className)}`}>
       <span className="material-symbols-outlined text-[12px]">{style.icon}</span>
       {style.label}
     </span>
@@ -93,7 +99,7 @@ const ClaimRow: React.FC<{ label: string; connector: string; text: string; item:
           </span>
           <p className="text-xs text-on-surface leading-relaxed">{text || <span className="italic text-outline">Não informado</span>}</p>
         </div>
-        <AuditBadge item={item} plain />
+        <AuditBadge item={item} variant="plain" />
       </div>
 
       {hasIssue && (item.problems.length > 0 || item.correction) && (
@@ -130,16 +136,14 @@ interface EvidenceAuditPanelProps {
   issues: StructuralIssue[];
   /** O que a User Story afirma em cada componente (Como / Quero / Para). */
   texts: Record<StoryComponent, string>;
-  busy: boolean;
   auditing: boolean;
-  onAudit: () => void;
 }
 
 const scrollToCriteria = () =>
   document.getElementById('criteria-title')?.closest('section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
 // Validação das evidências: estrutural (código) e semântica (IA, sem alterar a User Story).
-export const EvidenceAuditPanel: React.FC<EvidenceAuditPanelProps> = ({ audit, issues, texts, busy, auditing, onAudit }) => {
+export const EvidenceAuditPanel: React.FC<EvidenceAuditPanelProps> = ({ audit, issues, texts, auditing }) => {
   const errors = issues.filter((i) => i.severity === 'erro');
   const warnings = issues.filter((i) => i.severity === 'aviso');
   const claims = audit ? COMPONENTS.filter((c) => audit.components[c.key]) : [];
@@ -151,85 +155,98 @@ export const EvidenceAuditPanel: React.FC<EvidenceAuditPanelProps> = ({ audit, i
     { compativel: 0, parcial: 0, incompativel: 0, semSustentacao: 0 } as Record<SummaryGroup, number>
   );
   const total = allItems.length;
+  const [expanded, setExpanded] = useState(false);
+  const bodyId = 'evidence-audit-body';
 
   return (
     <section data-testid="evidence-audit" aria-labelledby="evidence-audit-title" aria-busy={auditing} className="bg-white rounded-xl p-6 shadow-xs border border-surface-container flex flex-col gap-4">
-      <div className="flex flex-wrap items-center justify-between gap-3 pb-2 border-b border-surface-container">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-surface-container-high text-primary flex items-center justify-center">
+      <div className={`flex flex-wrap items-center justify-between gap-3 ${expanded ? 'pb-2 border-b border-surface-container' : ''}`}>
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-8 h-8 rounded-lg bg-surface-container-high text-primary flex items-center justify-center shrink-0">
             <span className="material-symbols-outlined text-[20px]">fact_check</span>
           </div>
-          <div>
+          <div className="min-w-0">
             <h2 id="evidence-audit-title" className="text-base font-bold text-on-surface">Validação das Evidências</h2>
             <p className="text-xs text-on-surface-variant">Os trechos das fontes sustentam o que a User Story e os critérios afirmam?</p>
           </div>
         </div>
-        <button onClick={onAudit} disabled={busy} type="button" className="px-3.5 py-1.5 rounded-lg bg-surface-container-low hover:bg-surface-container text-secondary text-xs font-semibold flex items-center gap-1 border border-surface-container transition-colors shadow-xs disabled:opacity-50 cursor-pointer">
-          <span className={`material-symbols-outlined text-[18px] ${auditing ? 'animate-spin' : ''}`}>{auditing ? 'progress_activity' : 'policy'}</span>
-          <span>{auditing ? 'Auditando...' : 'Auditar'}</span>
+        {/* A auditoria é disparada em "Ações da Tarefa"; aqui só se expande/recolhe o resultado. */}
+        <button
+          type="button"
+          onClick={() => setExpanded((v) => !v)}
+          aria-expanded={expanded}
+          aria-controls={bodyId}
+          className="px-3.5 py-1.5 rounded-lg bg-surface-container-low hover:bg-surface-container text-secondary text-xs font-semibold flex items-center gap-1 border border-surface-container transition-colors shadow-xs cursor-pointer"
+        >
+          <span className={`material-symbols-outlined text-[18px] transition-transform ${expanded ? 'rotate-180' : ''}`}>expand_more</span>
+          <span>{expanded ? 'Recolher' : 'Expandir'}</span>
         </button>
       </div>
-
-      <div className="flex flex-wrap items-center gap-2 text-[11px]">
-        {audit && (
-          <span className="text-on-surface-variant inline-flex items-center gap-1">
-            <span className="material-symbols-outlined text-[13px]">auto_awesome</span>
-            Auditoria por IA · {audit.date}
-          </span>
-        )}
-        {audit?.outdated && (
-          <span className="px-2 py-0.5 rounded bg-[#fef3c7] text-[#92400e] font-semibold" title="A User Story mudou depois desta auditoria.">
-            Desatualizada: a User Story mudou depois da auditoria
-          </span>
-        )}
-      </div>
-
-      {issues.length > 0 && (
-        <ul data-testid="structural-issues" className="flex flex-col gap-0.5 p-3 rounded-lg bg-surface-container-low border border-surface-container">
-          {[...errors, ...warnings].map((issue, i) => (
-            <li key={i} className={`text-[11px] flex items-start gap-1 ${issue.severity === 'erro' ? 'text-error' : 'text-[#92400e]'}`}>
-              <span className="material-symbols-outlined text-[13px] mt-px">{issue.severity === 'erro' ? 'error' : 'warning'}</span>
-              <span>{issue.message}</span>
-            </li>
-          ))}
-        </ul>
-      )}
 
       <div role="status" aria-live="polite" className="sr-only">
         {auditing ? 'Auditoria em andamento.' : audit ? `${counts.compativel} de ${total} afirmações compatíveis.` : ''}
       </div>
 
-      {!audit ? (
-        <p className="text-xs text-on-surface-variant text-center py-3">
-          Esta User Story ainda não foi auditada. Use "Auditar" para conferir se as fontes sustentam cada afirmação.
-        </p>
-      ) : (
-        <>
-          {total > 0 && (
-            <div className="flex flex-col gap-1.5">
-              <p className="text-xs text-on-surface">
-                <span className="font-bold">{counts.compativel} de {total}</span> afirmações sustentadas pelas fontes
-              </p>
-              <SummaryBar counts={counts} total={total} />
-            </div>
-          )}
+      {expanded && (
+        <div id={bodyId} className="flex flex-col gap-4">
+          <div className="flex flex-wrap items-center gap-2 text-[11px]">
+            {audit && (
+              <span className="text-on-surface-variant inline-flex items-center gap-1">
+                <span className="material-symbols-outlined text-[13px]">auto_awesome</span>
+                Auditoria por IA · {audit.date}
+              </span>
+            )}
+            {audit?.outdated && (
+              <span className="px-2 py-0.5 rounded bg-[#fef3c7] text-[#92400e] font-semibold" title="A User Story mudou depois desta auditoria.">
+                Desatualizada: a User Story mudou depois da auditoria
+              </span>
+            )}
+          </div>
 
-          {claims.length > 0 && (
-            <ol className={`flex flex-col gap-2 ${auditing ? 'opacity-60' : ''}`}>
-              {claims.map((c) => (
-                <ClaimRow key={c.key} label={c.label} connector={c.connector} text={texts[c.key]} item={audit.components[c.key] as AuditItem} />
+          {issues.length > 0 && (
+            <ul data-testid="structural-issues" className="flex flex-col gap-0.5 p-3 rounded-lg bg-surface-container-low border border-surface-container">
+              {[...errors, ...warnings].map((issue, i) => (
+                <li key={i} className={`text-[11px] flex items-start gap-1 ${issue.severity === 'erro' ? 'text-error' : 'text-[#92400e]'}`}>
+                  <span className="material-symbols-outlined text-[13px] mt-px">{issue.severity === 'erro' ? 'error' : 'warning'}</span>
+                  <span>{issue.message}</span>
+                </li>
               ))}
-            </ol>
+            </ul>
           )}
 
-          {criteriaItems.length > 0 && (
-            <button type="button" onClick={scrollToCriteria} className="self-start text-xs text-primary hover:underline font-semibold flex items-center gap-1 cursor-pointer">
-              <span className="material-symbols-outlined text-[16px]">checklist</span>
-              Ver o resultado dos {criteriaItems.length} critério(s) de aceitação
-              <span className="material-symbols-outlined text-[14px]">arrow_upward</span>
-            </button>
+          {!audit ? (
+            <p className="text-xs text-on-surface-variant text-center py-3">
+              Esta User Story ainda não foi auditada. Use "Auditar" em Ações da Tarefa para conferir se as fontes sustentam cada afirmação.
+            </p>
+          ) : (
+            <>
+              {total > 0 && (
+                <div className="flex flex-col gap-1.5">
+                  <p className="text-xs text-on-surface">
+                    <span className="font-bold">{counts.compativel} de {total}</span> afirmações sustentadas pelas fontes
+                  </p>
+                  <SummaryBar counts={counts} total={total} />
+                </div>
+              )}
+
+              {claims.length > 0 && (
+                <ol className={`flex flex-col gap-2 ${auditing ? 'opacity-60' : ''}`}>
+                  {claims.map((c) => (
+                    <ClaimRow key={c.key} label={c.label} connector={c.connector} text={texts[c.key]} item={audit.components[c.key] as AuditItem} />
+                  ))}
+                </ol>
+              )}
+
+              {criteriaItems.length > 0 && (
+                <button type="button" onClick={scrollToCriteria} className="self-start text-xs text-primary hover:underline font-semibold flex items-center gap-1 cursor-pointer">
+                  <span className="material-symbols-outlined text-[16px]">checklist</span>
+                  Ver o resultado dos {criteriaItems.length} critério(s) de aceitação
+                  <span className="material-symbols-outlined text-[14px]">arrow_upward</span>
+                </button>
+              )}
+            </>
           )}
-        </>
+        </div>
       )}
     </section>
   );

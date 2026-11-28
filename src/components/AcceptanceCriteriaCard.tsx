@@ -152,7 +152,7 @@ const CriterionItem: React.FC<{
           )}
           {audit ? (
             <span className={criterion.outdated ? 'opacity-60' : ''} title={criterion.outdated ? 'Resultado da auditoria anterior à mudança da User Story' : undefined}>
-              <AuditBadge item={audit} />
+              <AuditBadge item={audit} variant="outline" />
             </span>
           ) : (
             <span className="px-1.5 py-0.5 rounded bg-surface-container-high text-on-surface-variant text-[10px] font-semibold">Não auditado</span>
@@ -273,10 +273,6 @@ export const AcceptanceCriteriaCard: React.FC<AcceptanceCriteriaCardProps> = ({
 }) => {
   const auditOf = (c: TestCriterion) => (c.criterionId != null ? audits?.[c.criterionId] : undefined);
   const outdatedCount = criteria.filter((c) => c.outdated).length;
-  const issueCount = criteria.filter((c) => {
-    const audit = auditOf(c);
-    return !c.outdated && audit && audit.result !== 'COMPATIVEL';
-  }).length;
 
   return (
     <section aria-labelledby="criteria-title" aria-busy={generating} className="bg-white rounded-xl p-6 shadow-xs border border-surface-container flex flex-col gap-4">
@@ -290,7 +286,6 @@ export const AcceptanceCriteriaCard: React.FC<AcceptanceCriteriaCardProps> = ({
             <p className="text-xs text-on-surface-variant">
               {criteria.length > 0 ? `${criteria.length} regra(s) no formato Dado / Quando / Então` : 'Critérios objetivos para verificar a entrega'}
               {outdatedCount > 0 && <> · <span className="text-[#92400e] font-semibold">{outdatedCount} desatualizado(s)</span></>}
-              {issueCount > 0 && <> · <span className="text-[#92400e] font-semibold">{issueCount} com sustentação incompleta</span></>}
             </p>
           </div>
         </div>

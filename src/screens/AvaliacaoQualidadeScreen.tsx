@@ -476,6 +476,13 @@ export const AvaliacaoQualidadeScreen: React.FC<AvaliacaoQualidadeScreenProps> =
           </div>
         </div>
 
+        <EvidenceAuditPanel
+          audit={story.evidenceAudit}
+          issues={structuralIssues}
+          texts={{ perfil: story.actor, funcionalidade: story.action, beneficio: story.benefit }}
+          auditing={isAuditing}
+        />
+
         <AcceptanceCriteriaCard
           criteria={story.criteria}
           gaps={story.criteriaGaps}
@@ -487,15 +494,6 @@ export const AvaliacaoQualidadeScreen: React.FC<AvaliacaoQualidadeScreenProps> =
           onAdd={() => setNewRuleModalOpen(true)}
           onDelete={handleDeleteRule}
           onConfirm={handleConfirmCriterion}
-        />
-
-        <EvidenceAuditPanel
-          audit={story.evidenceAudit}
-          issues={structuralIssues}
-          texts={{ perfil: story.actor, funcionalidade: story.action, beneficio: story.benefit }}
-          busy={isBusy}
-          auditing={isAuditing}
-          onAudit={handleAudit}
         />
 
         {updateSuggestion && (
