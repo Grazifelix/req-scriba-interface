@@ -161,7 +161,7 @@ const CriterionItem: React.FC<{
             <span className="px-1.5 py-0.5 rounded bg-surface-container-high text-on-surface-variant text-[10px] font-semibold">Não auditado</span>
           )}
           {criterion.outdated && (
-            <span data-testid="criterion-outdated" className="px-1.5 py-0.5 rounded bg-[#fef3c7] text-[#92400e] text-[10px] font-semibold inline-flex items-center gap-0.5" title={criterion.outdatedReason ?? ''}>
+            <span data-testid="criterion-outdated" className="px-1.5 py-0.5 rounded border border-current/40 text-[#92400e] text-[10px] font-semibold inline-flex items-center gap-0.5" title={criterion.outdatedReason ?? ''}>
               <span className="material-symbols-outlined text-[12px]">update</span>
               Desatualizado
             </span>
